@@ -12,5 +12,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial release
-- Support for `Bun.serve`
-- Support for `Bao.js`

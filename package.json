@@ -1,12 +1,12 @@
 {
-	"name": "umami-api",
+	"name": "@jakobbouchard/umami-api-client",
 	"version": "0.1.0",
 	"description": "A simple API client for Umami analytics",
 	"author": "Jakob Bouchard <jakob@jakobbouchard.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/jakobbouchard/serve-static-bun.git"
+		"url": "https://github.com/jakobbouchard/umami-api-client.git"
 	},
 	"main": "./dist/index.js",
 	"scripts": {

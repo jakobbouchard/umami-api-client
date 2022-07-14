@@ -68,7 +68,7 @@ class BaseUmamiAPI {
 }
 
 export default class UmamiAPI extends BaseUmamiAPI {
-	async auth(username: string, password: string) {
+	async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
 		try {
 			const { data, status } = await axios.post(`https://${this._server}/api/auth/login`, {
 				username,
@@ -136,7 +136,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		name: string;
 		enable_share_url?: boolean;
 		public?: boolean;
-	}) {
+	}): Promise<ITrackedWebsite> {
 		return await this.post("/website", options);
 	}
 
