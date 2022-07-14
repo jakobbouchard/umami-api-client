@@ -1,5 +1,6 @@
 {
-	"name": "@jakobbouchard/umami-api-client",
+	"name": "umami-api",
+	"private": false,
 	"version": "0.1.0",
 	"description": "A simple API client for Umami analytics",
 	"author": "Jakob Bouchard <jakob@jakobbouchard.dev>",
