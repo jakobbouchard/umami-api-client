@@ -372,7 +372,7 @@ export default class UmamiAPI {
 	 * @returns The website's pageviews from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/pageviews.js Relevant Umami source code}
 	 */
-	public async getPageViews(
+	public async getPageviews(
 		website_id: number,
 		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string }
 	): Promise<IPageViews> {
