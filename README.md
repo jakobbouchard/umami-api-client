@@ -3,7 +3,7 @@
 ## Installation
 
 ```shell
-npm install @jakobbouchard/umami-api-client
+npm install umami-api
 ```
 
 ## Usage
