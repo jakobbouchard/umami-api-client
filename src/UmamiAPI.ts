@@ -60,10 +60,34 @@ class BaseUmamiAPI {
 		this._server = server.replace(/https?:\/\//, "");
 	}
 
-	collect(type: "event", payload: IEventPayload): void;
-	collect(type: "pageview", payload: IPageViewPayload): void;
-	collect(type: "pageview" | "event", payload: IEventPayload | IPageViewPayload) {
-		return axios.post(`https://${this._server}/api/auth/login`, { type, payload });
+	async collect(type: "event", payload: IEventPayload, userAgent?: string): Promise<any>;
+	async collect(type: "pageview", payload: IPageViewPayload, userAgent?: string): Promise<any>;
+	async collect(
+		type: "pageview" | "event",
+		payload: IEventPayload | IPageViewPayload,
+		userAgent: string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0"
+	): Promise<any> {
+		if (userAgent === "") {
+			throw new Error(
+				"A user agent is required for the /api/collect endpoint to work. See https://umami.is/docs/api"
+			);
+		}
+
+		try {
+			const { data, status } = await axios.post(
+				`https://${this._server}/api/collect`,
+				{ type, payload },
+				{ headers: { "User-Agent": userAgent } }
+			);
+			if (status < 200 || status >= 300) {
+				throw new Error(`Status code: ${status} - Response: ${data}`);
+			}
+			console.log(data, status);
+			return data;
+		} catch (error) {
+			console.error(error);
+			throw new Error(`Collect failed`, { cause: error });
+		}
 	}
 }
 
