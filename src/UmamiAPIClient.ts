@@ -79,7 +79,10 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 	event_value: string;
 }
 
-export default class UmamiAPI {
+/**
+ * Umami API Client
+ */
+export default class UmamiAPIClient {
 	private _axios: AxiosInstance;
 	private _auth: Promise<AxiosResponse<IAuthData>>;
 	private _lastAuthCheck: number = Date.now();
