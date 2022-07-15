@@ -82,16 +82,27 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 export default class UmamiAPI {
 	private _axios: AxiosInstance;
 	private _auth: Promise<AxiosResponse<IAuthData>>;
-	private _defaultPeriod: TTimePeriod = "24h";
 	private _lastAuthCheck: number = Date.now();
-	private _adminEndpoints: string[] = ["/accounts"];
+	private _adminOnlyEndpoints: string[] = ["/accounts"];
+	private _defaultPeriod: TTimePeriod = "24h";
+	private _defaultUnit: TUnit = "hour";
+	private _defaultMetric: TMetric = "url";
+	private _defaultTZ: string = "America/Toronto";
 
 	public setDefaultPeriod(period: TTimePeriod) {
 		this._defaultPeriod = period;
 	}
 
-	public getDefaultPeriod() {
-		return this._defaultPeriod;
+	public setDefaultUnit(unit: TUnit) {
+		this._defaultUnit = unit;
+	}
+
+	public setDefaultTZ(tz: string) {
+		this._defaultTZ = tz;
+	}
+
+	public setDefaultMetric(metric: TMetric) {
+		this._defaultMetric = metric;
 	}
 
 	public async getCurrentUser() {
@@ -128,25 +139,25 @@ export default class UmamiAPI {
 		this._axios.interceptors.request.use(this._verifyAuth.bind(this));
 
 		this._auth = this._axios.post("/auth/login", { username, password }).catch((error) => {
-			throw this._richError("Login failed", error);
+			throw this._richError("Login failed", error, { server, username });
 		});
 	}
 
 	private async _verifyAuth(config: AxiosRequestConfig) {
-		if (config.url == "/auth/login") return config;
+		if (config.url == "/auth/login" || config.url == "/collect") return config;
 
-		const { data: auth } = await this._auth;
+		const auth = await this._auth;
 
-		config.headers = { ...config.headers, Authorization: `Bearer ${auth.token}` };
+		config.headers = { ...config.headers, Authorization: `Bearer ${auth.data.token}` };
 
 		if (config.url == "/auth/verify") return config;
 
-		let admin = this._adminEndpoints.includes(config.url);
+		let admin = this._adminOnlyEndpoints.includes(config.url);
 		if (config.url == "/websites" && !!(config.params?.include_all || config.params?.user_id)) {
 			admin = true;
 		}
 
-		if (admin && !auth.user.is_admin) {
+		if (admin && !auth.data.user.is_admin) {
 			throw new Error("You must be an administrator to use this function");
 		}
 
@@ -190,9 +201,7 @@ export default class UmamiAPI {
 	): Promise<string> {
 		try {
 			if (!userAgent) {
-				throw new Error(
-					"A user agent is required for the /api/collect endpoint to work. See https://umami.is/docs/api"
-				);
+				throw new Error("A user agent is required. See https://umami.is/docs/api");
 			}
 
 			const { data } = await this._axios.post(
@@ -202,7 +211,7 @@ export default class UmamiAPI {
 			);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not collect", error, { payload });
+			throw this._richError("Could not collect", error, { type, payload, userAgent });
 		}
 	}
 
@@ -264,6 +273,20 @@ export default class UmamiAPI {
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
 	 */
 	public async getWebsite(website_id: number): Promise<ITrackedWebsite>;
+	public async getWebsite(website_id: number = null): Promise<ITrackedWebsite> {
+		try {
+			if (website_id == null) {
+				const websites = await this.getWebsites();
+				return websites[0];
+			}
+
+			const { data } = await this._axios.get(`/website/${website_id}`);
+			return data;
+		} catch (error) {
+			throw this._richError("Could not get website", error, { website_id });
+		}
+	}
+
 	/**
 	 * Get a website by a property
 	 * @param key The property to check
@@ -273,28 +296,16 @@ export default class UmamiAPI {
 	 * @example
 	 * Get a website by domain name
 	 * ```ts
-	 * const website = await getWebsite("domain", "example.com");
+	 * const website = await getWebsiteBy(key: "domain", value: "example.com");
 	 * ```
 	 */
-	public async getWebsite(key: keyof ITrackedWebsite, value: string): Promise<ITrackedWebsite>;
-	public async getWebsite(
-		keyOrId?: keyof ITrackedWebsite | number,
-		value?: string
-	): Promise<ITrackedWebsite> {
-		try {
-			if ((!keyOrId && !value) || (keyOrId && value)) {
-				const websites = await this.getWebsites();
-				if (!keyOrId) {
-					return websites[0];
-				}
-				return websites.find((website) => website[keyOrId as keyof ITrackedWebsite] == value);
-			}
-
-			const { data } = await this._axios.get(`/website/${keyOrId}`);
-			return data;
-		} catch (error) {
-			throw this._richError("Could not get website", error, { keyOrId, value });
+	public async getWebsiteBy(key: keyof ITrackedWebsite, value: string | number) {
+		const websites = await this.getWebsites();
+		const website = websites.find((website) => website[key] == value);
+		if (!website) {
+			throw this._richError("Could not find website", null, { key, value });
 		}
+		return website;
 	}
 
 	public async resetWebsite(website_id: number) {
@@ -329,34 +340,33 @@ export default class UmamiAPI {
 			const { data } = await this._axios.get("/websites", { params: options });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get websites", error, options);
+			throw this._richError("Could not get websites", error, { options });
 		}
 	}
 
 	/**
 	 * Gets the stats of a website from a specified time period using it's ID
 	 * @param website_id The website's ID (not UUID)
-	 * @param period The time period of stats to return
+	 * @param options.period The time period of stats to return
 	 * @returns The website's stats from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/stats.js Relevant Umami source code}
 	 */
-	public async getStats(
-		website_id: number,
-		period: TTimePeriod = this._defaultPeriod
-	): Promise<IStats> {
-		const options = { ...convertPeriodToTime(period) };
+	public async getStats(website_id: number, options?: { period?: TTimePeriod }): Promise<IStats> {
+		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
+		const params = { start_at, end_at };
+
 		try {
-			const { data } = await this._axios.get(`/website/${website_id}/stats`, { params: options });
+			const { data } = await this._axios.get(`/website/${website_id}/stats`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website stats", error, { website_id, options, period });
+			throw this._richError("Could not get stats", error, { website_id, params });
 		}
 	}
 
 	/**
 	 * Gets the pageviews of a website from a specified time period using it's ID
 	 * @param website_id The website's ID (not UUID)
-	 * @param period The time period of pageviews to return
+	 * @param options.period The time period of pageviews to return
 	 * @param options.unit The interval of time/precision of the returned pageviews
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
 	 * @returns The website's pageviews from the specified time period
@@ -364,29 +374,25 @@ export default class UmamiAPI {
 	 */
 	public async getPageViews(
 		website_id: number,
-		period: TTimePeriod = this._defaultPeriod,
-		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
+		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string }
 	): Promise<IPageViews> {
-		options = { ...convertPeriodToTime(period), ...options } as any;
+		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
+		const unit = options.unit ?? this._defaultUnit;
+		const tz = options.tz ?? this._defaultTZ;
+		const params = { start_at, end_at, unit, tz };
 
 		try {
-			const { data } = await this._axios.get(`/website/${website_id}/pageviews`, {
-				params: options,
-			});
+			const { data } = await this._axios.get(`/website/${website_id}/pageviews`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website pageviews", error, {
-				website_id,
-				options,
-				period,
-			});
+			throw this._richError("Could not get pageviews", error, { website_id, params });
 		}
 	}
 
 	/**
 	 * Gets the events of a website from a specified time period using it's ID
 	 * @param website_id The website's ID (not UUID)
-	 * @param period The time period of events to return
+	 * @param options.period The time period of events to return
 	 * @param options.unit The interval of time/precision of the returned events
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
 	 * @returns An array of events from the specified time period
@@ -394,41 +400,39 @@ export default class UmamiAPI {
 	 */
 	public async getEvents(
 		website_id: number,
-		period: TTimePeriod = this._defaultPeriod,
-		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
+		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string }
 	): Promise<IEvent[]> {
-		options = { ...convertPeriodToTime(period), ...options } as any;
+		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
+		const unit = options.unit ?? this._defaultUnit;
+		const tz = options.tz ?? this._defaultTZ;
+		const params = { start_at, end_at, unit, tz };
 
 		try {
-			const { data } = await this._axios.get(`/website/${website_id}/events`, {
-				params: options,
-			});
+			const { data } = await this._axios.get(`/website/${website_id}/events`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website events", error, { website_id, options, period });
+			throw this._richError("Could not get events", error, { website_id, params });
 		}
 	}
 
 	public async getEventsBy(
 		website_id: number,
-		filter: "type" | "name",
-		value: string,
-		period: TTimePeriod = this._defaultPeriod
+		options: { filter: "type" | "name"; value: string; period?: TTimePeriod }
 	) {
 		try {
-			const events = await this.getMetrics(website_id, period, { type: "event" });
+			const events = await this.getMetrics(website_id, { period: options.period, type: "event" });
 
 			return events.reduce((total, { x, y }) => {
 				const [type, name] = x.split("\t");
-				switch (filter) {
+				switch (options.filter) {
 					case "type":
-						if (type == value) {
+						if (type == options.value) {
 							return total + y;
 						}
 						break;
 
 					case "name":
-						if (name == value) {
+						if (name == options.value) {
 							return total + y;
 						}
 						break;
@@ -436,41 +440,31 @@ export default class UmamiAPI {
 				return total;
 			}, 0);
 		} catch (error) {
-			throw this._richError("Could not get website events", error, {
-				website_id,
-				filter,
-				value,
-				period,
-			});
+			throw this._richError("Could not get events", error, { website_id, options });
 		}
 	}
 
 	/**
 	 * Gets a type of metrics of a website from a specified time period using it's ID
 	 * @param website_id The website's ID (not UUID)
-	 * @param period The time period of events to return
+	 * @param options.period The time period of events to return
 	 * @param options.type The type of metric to get. Defaults to url
 	 * @returns An array of metrics from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/metrics.js Relevant Umami source code}
 	 */
 	public async getMetrics(
 		website_id: number,
-		period: TTimePeriod = this._defaultPeriod,
-		options: { type: TMetric } = { type: "url" }
+		options?: { period?: TTimePeriod; type?: TMetric }
 	): Promise<IMetric[]> {
-		options = { ...convertPeriodToTime(period), ...options } as any;
+		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
+		const type = options.type ?? this._defaultMetric;
+		const params = { start_at, end_at, type };
 
 		try {
-			const { data } = await this._axios.get(`/website/${website_id}/metrics`, {
-				params: options,
-			});
+			const { data } = await this._axios.get(`/website/${website_id}/metrics`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website metrics", error, {
-				website_id,
-				options,
-				period,
-			});
+			throw this._richError("Could not get metrics", error, { website_id, params });
 		}
 	}
 
@@ -479,7 +473,7 @@ export default class UmamiAPI {
 			const { data } = await this._axios.get(`/website/${website_id}/active`);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website active visitors", error, { website_id });
+			throw this._richError("Could not get active visitors", error, { website_id });
 		}
 	}
 
