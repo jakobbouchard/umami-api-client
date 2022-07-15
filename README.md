@@ -31,7 +31,7 @@ Creating a new website and accessing its data
 ```ts
 import UmamiAPI from "./UmamiAPI";
 
-const umami = new UmamiAPI("stats.example.com");
+const umami = new UmamiAPI("stats.example.com").auth("username", "password");
 
 const newWebsite = umami.createWebsite({
 	domain: "test.com",
