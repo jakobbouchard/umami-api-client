@@ -147,7 +147,7 @@ export default class UmamiAPI extends BaseUmamiAPI {
 	 * @returns An authenticated class instance, able to use more functionality.
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
-	public async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
+	public async auth(username: string, password: string) {
 		try {
 			const { data } = await this._axios.post("/auth/login", {
 				username,
