@@ -1,5 +1,7 @@
-import axios, { AxiosInstance } from "axios";
-import { TTimePeriod, convertPeriodToTime } from "./utils/time-periods";
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import type { TTimePeriod } from "./utils/time-periods";
+import axios from "axios";
+import { convertPeriodToTime } from "./utils/time-periods";
 
 type TUnit = "year" | "month" | "day" | "hour";
 type TMetric = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
@@ -78,21 +80,87 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 }
 
 export default class UmamiAPI {
-	private _server: string;
 	private _axios: AxiosInstance;
+	private _auth: Promise<AxiosResponse<IAuthData>>;
+	private _defaultPeriod: TTimePeriod = "24h";
+	private _lastAuthCheck: number = Date.now();
+	private _adminEndpoints: string[] = ["/accounts"];
+
+	public setDefaultPeriod(period: TTimePeriod) {
+		this._defaultPeriod = period;
+	}
+
+	public getDefaultPeriod() {
+		return this._defaultPeriod;
+	}
+
+	public async getCurrentUser() {
+		return (await this._auth).data.user;
+	}
+
+	private _richError(message: string, cause?: any, options?: any) {
+		if (!options) options = "None specified";
+		options = JSON.stringify(options);
+
+		if (!cause) cause = "None specified";
+		cause = cause.toString();
+
+		return new Error(`${message}\nOptions: ${options}\nStacktrace:`, { cause });
+	}
 
 	/**
 	 * @param server The Umami installation hostname (e.g. app.umami.is). The protocol, if present, will be removed.
+	 * @param username Username of the user you want to login
+	 * @param password Password of the user you want to login
+	 * @returns An authenticated class instance
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
-	constructor(server: string) {
-		if (!server) {
-			throw new Error("A server hostname is required");
-		}
-		this._server = server;
+	constructor(server: string, username: string, password: string) {
+		if (!server) throw new Error("A server hostname is required");
+		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
+		if (!username || !password) throw new Error("A username and a password are required");
+
 		this._axios = axios.create({
-			baseURL: `https://${this._server.replace(/https?:\/\//, "")}/api`,
+			baseURL: `https://${server}/api`,
 			timeout: 1000,
 		});
+
+		this._axios.interceptors.request.use(this._verifyAuth.bind(this));
+
+		this._auth = this._axios.post("/auth/login", { username, password }).catch((error) => {
+			throw this._richError("Login failed", error);
+		});
+	}
+
+	private async _verifyAuth(config: AxiosRequestConfig) {
+		if (config.url == "/auth/login") return config;
+
+		const { data: auth } = await this._auth;
+
+		config.headers = { ...config.headers, Authorization: `Bearer ${auth.token}` };
+
+		if (config.url == "/auth/verify") return config;
+
+		let admin = this._adminEndpoints.includes(config.url);
+		if (config.url == "/websites" && !!(config.params?.include_all || config.params?.user_id)) {
+			admin = true;
+		}
+
+		if (admin && !auth.user.is_admin) {
+			throw new Error("You must be an administrator to use this function");
+		}
+
+		if (this._lastAuthCheck + 60 * 60 * 1000 < Date.now()) {
+			this._lastAuthCheck = Date.now();
+
+			try {
+				await this._axios.get("/auth/verify");
+			} catch (error) {
+				throw this._richError("Could not verify authentication", error, { axiosConfig: config });
+			}
+		}
+
+		return config;
 	}
 
 	/**
@@ -134,72 +202,7 @@ export default class UmamiAPI {
 			);
 			return data;
 		} catch (error) {
-			throw new Error(`Collect failed`, { cause: error.toString() });
-		}
-	}
-
-	/*** AUTHENTICATED FUNCTIONS ***/
-	private _auth: IAuthData;
-	private _defaultPeriod: TTimePeriod = "24h";
-	private _lastAuthCheck: number;
-
-	/**
-	 * Authenticates a user, to be able to use authenticated API functions
-	 * @param username Username of the user you want to login
-	 * @param password Password of the user you want to login
-	 * @returns An authenticated class instance, able to use more functionality.
-	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
-	 */
-	public async auth(username: string, password: string) {
-		try {
-			if (!username || !password) throw new Error("You must specify a username and a password");
-
-			const { data } = await this._axios.post("/auth/login", {
-				username,
-				password,
-			});
-
-			this._auth = data;
-			this._axios.defaults.headers.common["Authorization"] = `Bearer ${this._auth.token}`;
-			this._lastAuthCheck = Date.now();
-			return this;
-		} catch (error) {
-			throw new Error("Login failed", { cause: error.toString() });
-		}
-	}
-
-	public setDefaultPeriod(period: TTimePeriod) {
-		this._defaultPeriod = period;
-	}
-
-	public getDefaultPeriod() {
-		return this._defaultPeriod;
-	}
-
-	public getCurrentUser() {
-		return this._auth.user;
-	}
-
-	private async verifyAuth(admin = false) {
-		if (!this._auth) {
-			throw new Error("You must be logged in to use this function");
-		}
-
-		if (admin && !this._auth.user.is_admin) {
-			throw new Error("You must be an administrator to use this function");
-		}
-
-		if (this._lastAuthCheck + 60 * 60 * 1000 < Date.now()) {
-			try {
-				const { data } = await this._axios.get("/auth/verify");
-				this._auth.user = data;
-
-				if (admin && !data.is_admin) {
-					throw new Error("You must be an administrator to use this function");
-				}
-			} catch (error) {
-				throw new Error("Could not verify authentication", { cause: error.toString() });
-			}
+			throw this._richError("Could not collect", error, { payload });
 		}
 	}
 
@@ -217,12 +220,10 @@ export default class UmamiAPI {
 		enable_share_url?: boolean;
 	}): Promise<ITrackedWebsite> {
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.post("/website", options);
 			return data;
 		} catch (error) {
-			throw new Error(`POST request to /api/website failed`, { cause: error.toString() });
+			throw this._richError("Could not create website", error, { options });
 		}
 	}
 
@@ -244,12 +245,10 @@ export default class UmamiAPI {
 		}
 	): Promise<ITrackedWebsite> {
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.post("/website", { website_id, ...options });
 			return data;
 		} catch (error) {
-			throw new Error(`POST request to /api/website failed`, { cause: error.toString() });
+			throw this._richError("Could not update website", error, { website_id, options });
 		}
 	}
 
@@ -283,8 +282,6 @@ export default class UmamiAPI {
 		value?: string
 	): Promise<ITrackedWebsite> {
 		try {
-			await this.verifyAuth();
-
 			if ((!keyOrId && !value) || (keyOrId && value)) {
 				const websites = await this.getWebsites();
 				if (!keyOrId) {
@@ -296,34 +293,24 @@ export default class UmamiAPI {
 			const { data } = await this._axios.get(`/website/${keyOrId}`);
 			return data;
 		} catch (error) {
-			throw new Error(`GET request to /api/website/${keyOrId} failed`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not get website", error, { keyOrId, value });
 		}
 	}
 
 	public async resetWebsite(website_id: number) {
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.post(`/website/${website_id}/reset`);
 			return data;
 		} catch (error) {
-			throw new Error(`POST request to /api/website/${website_id}/reset failed`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not reset website", error, { website_id });
 		}
 	}
 
 	public async deleteWebsite(website_id: number) {
 		try {
-			await this.verifyAuth();
-
 			await this._axios.delete(`/website/${website_id}`);
 		} catch (error) {
-			throw new Error(`DELETE request to /api/website/${website_id} failed`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not delete website", error, { website_id });
 		}
 	}
 
@@ -339,14 +326,10 @@ export default class UmamiAPI {
 		user_id?: number;
 	}): Promise<ITrackedWebsite[]> {
 		try {
-			await this.verifyAuth(!!(options.include_all || options.user_id));
-
 			const { data } = await this._axios.get("/websites", { params: options });
 			return data;
 		} catch (error) {
-			throw new Error(`GET request to /api/websites failed with params: ${options.toString()}`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not get websites", error, options);
 		}
 	}
 
@@ -363,17 +346,10 @@ export default class UmamiAPI {
 	): Promise<IStats> {
 		const options = { ...convertPeriodToTime(period) };
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.get(`/website/${website_id}/stats`, { params: options });
 			return data;
 		} catch (error) {
-			throw new Error(
-				`GET request to /api/website/${website_id}/stats failed with params: ${options.toString()}`,
-				{
-					cause: error.toString(),
-				}
-			);
+			throw this._richError("Could not get website stats", error, { website_id, options, period });
 		}
 	}
 
@@ -394,19 +370,16 @@ export default class UmamiAPI {
 		options = { ...convertPeriodToTime(period), ...options } as any;
 
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.get(`/website/${website_id}/pageviews`, {
 				params: options,
 			});
 			return data;
 		} catch (error) {
-			throw new Error(
-				`GET request to /api/website/${website_id}/pageviews failed with params: ${options.toString()}`,
-				{
-					cause: error.toString(),
-				}
-			);
+			throw this._richError("Could not get website pageviews", error, {
+				website_id,
+				options,
+				period,
+			});
 		}
 	}
 
@@ -427,19 +400,12 @@ export default class UmamiAPI {
 		options = { ...convertPeriodToTime(period), ...options } as any;
 
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.get(`/website/${website_id}/events`, {
 				params: options,
 			});
 			return data;
 		} catch (error) {
-			throw new Error(
-				`GET request to /api/website/${website_id}/events failed with params: ${options.toString()}`,
-				{
-					cause: error.toString(),
-				}
-			);
+			throw this._richError("Could not get website events", error, { website_id, options, period });
 		}
 	}
 
@@ -449,25 +415,34 @@ export default class UmamiAPI {
 		value: string,
 		period: TTimePeriod = this._defaultPeriod
 	) {
-		const events = await this.getMetrics(website_id, period, { type: "event" });
+		try {
+			const events = await this.getMetrics(website_id, period, { type: "event" });
 
-		return events.reduce((total, { x, y }) => {
-			const [type, name] = x.split("\t");
-			switch (filter) {
-				case "type":
-					if (type == value) {
-						return total + y;
-					}
-					break;
+			return events.reduce((total, { x, y }) => {
+				const [type, name] = x.split("\t");
+				switch (filter) {
+					case "type":
+						if (type == value) {
+							return total + y;
+						}
+						break;
 
-				case "name":
-					if (name == value) {
-						return total + y;
-					}
-					break;
-			}
-			return total;
-		}, 0);
+					case "name":
+						if (name == value) {
+							return total + y;
+						}
+						break;
+				}
+				return total;
+			}, 0);
+		} catch (error) {
+			throw this._richError("Could not get website events", error, {
+				website_id,
+				filter,
+				value,
+				period,
+			});
+		}
 	}
 
 	/**
@@ -486,32 +461,25 @@ export default class UmamiAPI {
 		options = { ...convertPeriodToTime(period), ...options } as any;
 
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.get(`/website/${website_id}/metrics`, {
 				params: options,
 			});
 			return data;
 		} catch (error) {
-			throw new Error(
-				`GET request to /api/website/${website_id}/metrics failed with params: ${options.toString()}`,
-				{
-					cause: error.toString(),
-				}
-			);
+			throw this._richError("Could not get website metrics", error, {
+				website_id,
+				options,
+				period,
+			});
 		}
 	}
 
 	public async getActiveVisitors(website_id: number) {
 		try {
-			await this.verifyAuth();
-
 			const { data } = await this._axios.get(`/website/${website_id}/active`);
 			return data;
 		} catch (error) {
-			throw new Error(`GET request to /api/website/${website_id}/active failed`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not get website active visitors", error, { website_id });
 		}
 	}
 
@@ -524,14 +492,10 @@ export default class UmamiAPI {
 	 */
 	public async getAccounts() {
 		try {
-			await this.verifyAuth(true);
-
 			const { data } = await this._axios.get("/accounts");
 			return data;
 		} catch (error) {
-			throw new Error(`GET request to /api/accounts failed`, {
-				cause: error.toString(),
-			});
+			throw this._richError("Could not get accounts", error);
 		}
 	}
 }
