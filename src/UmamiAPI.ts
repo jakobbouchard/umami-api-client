@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { TTimePeriod, convertPeriodToTime } from "./utils/time-periods";
 
 type TUnit = "year" | "month" | "day" | "hour";
@@ -10,6 +10,7 @@ interface IAuthData {
 		user_id: number;
 		username: string;
 		is_admin: boolean;
+		iat?: number;
 	};
 }
 
@@ -96,7 +97,11 @@ class BaseUmamiAPI {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L75 Relevant Umami source code}
 	 */
-	async collect(type: "pageview", payload: IPageViewPayload, userAgent?: string): Promise<string>;
+	public async collect(
+		type: "pageview",
+		payload: IPageViewPayload,
+		userAgent?: string
+	): Promise<string>;
 	/**
 	 * Collects an event
 	 * @param type The type of event to send
@@ -104,8 +109,8 @@ class BaseUmamiAPI {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L77 Relevant Umami source code}
 	 */
-	async collect(type: "event", payload: IEventPayload, userAgent?: string): Promise<string>;
-	async collect(
+	public async collect(type: "event", payload: IEventPayload, userAgent?: string): Promise<string>;
+	public async collect(
 		type: "pageview" | "event",
 		payload: IEventPayload | IPageViewPayload,
 		userAgent: string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0"
@@ -137,7 +142,7 @@ export default class UmamiAPI extends BaseUmamiAPI {
 	 * @returns An authenticated class instance, able to use more functionality.
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
-	async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
+	public async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
 		try {
 			const { data } = await axios.post(`https://${this._server}/api/auth/login`, {
 				username,
@@ -152,29 +157,58 @@ export default class UmamiAPI extends BaseUmamiAPI {
 }
 
 class AuthenticatedUmamiAPI extends BaseUmamiAPI {
-	protected _token: IAuthData["token"];
-	public user: IAuthData["user"];
-	public is_admin: boolean;
+	protected _auth: IAuthData;
+	protected _axiosOptions: AxiosRequestConfig;
+	protected _defaultPeriod: TTimePeriod = "24h";
+	protected _lastCheck: number;
 
 	constructor(server: string, auth: IAuthData) {
 		super(server);
-		this._token = auth.token;
-		this.user = auth.user;
+		this._auth = auth;
+		this._axiosOptions = {
+			headers: { Authorization: `Bearer ${this._auth.token}` },
+		};
+		this._lastCheck = Date.now();
+	}
+
+	public setDefaultPeriod(period: TTimePeriod) {
+		this._defaultPeriod = period;
+	}
+
+	public getDefaultPeriod() {
+		return this._defaultPeriod;
+	}
+
+	public getCurrentUser() {
+		return this._auth.user;
 	}
 
 	protected assertAdmin(message: string) {
-		if (!this.is_admin) {
+		if (!this._auth.user.is_admin) {
 			throw new Error(message);
 		}
 	}
 
-	protected async POST(endpoint: string, options?: any) {
+	protected async verifyAuth() {
+		if (this._lastCheck + 60 * 60 * 1000 < Date.now()) {
+			try {
+				const { data } = await axios.get(
+					`https://${this._server}/api/auth/verify`,
+					this._axiosOptions
+				);
+				this._auth.user = data;
+			} catch (error) {
+				throw new Error("Could not verify authentication", { cause: error.toString() });
+			}
+		}
+	}
+
+	protected async POST(endpoint: string, payload: any) {
+		await this.verifyAuth();
 		const url = `https://${this._server}/api${endpoint}`;
 
 		try {
-			const { data } = await axios.post(url, options, {
-				headers: { Authorization: `Bearer ${this._token}` },
-			});
+			const { data } = await axios.post(url, payload, this._axiosOptions);
 			return data;
 		} catch (error) {
 			throw new Error(`POST request to ${url} failed`, { cause: error.toString() });
@@ -182,13 +216,12 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	}
 
 	protected async GET(endpoint: string, options?: any) {
+		await this.verifyAuth();
 		const params = options ? new URLSearchParams(options).toString() : "";
 		const url = `https://${this._server}/api${endpoint}?${params}`;
 
 		try {
-			const { data } = await axios.get(url, {
-				headers: { Authorization: `Bearer ${this._token}` },
-			});
+			const { data } = await axios.get(url, this._axiosOptions);
 			return data;
 		} catch (error) {
 			throw new Error(`GET request to ${url} failed`, { cause: error.toString() });
@@ -196,12 +229,11 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	}
 
 	protected async DELETE(endpoint: string) {
+		await this.verifyAuth();
 		const url = `https://${this._server}/api${endpoint}`;
 
 		try {
-			const { data } = await axios.delete(url, {
-				headers: { Authorization: `Bearer ${this._token}` },
-			});
+			const { data } = await axios.delete(url, this._axiosOptions);
 			return data;
 		} catch (error) {
 			throw new Error(`DELETE request to ${url} failed`, { cause: error.toString() });
@@ -216,7 +248,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns The new website's information
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/index.js#L36 Relevant Umami source code}
 	 */
-	async createWebsite(options: {
+	public async createWebsite(options: {
 		domain: string;
 		name: string;
 		enable_share_url?: boolean;
@@ -233,7 +265,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns The website's information
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/index.js#L30 Relevant Umami source code}
 	 */
-	async updateWebsite(
+	public async updateWebsite(
 		website_id: number,
 		options: {
 			domain: string;
@@ -249,13 +281,13 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns The first website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
-	async getWebsite(): Promise<ITrackedWebsite>;
+	public async getWebsite(): Promise<ITrackedWebsite>;
 	/**
 	 * Get the website by its ID (not UUID)
 	 * @returns The website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
 	 */
-	async getWebsite(website_id: number): Promise<ITrackedWebsite>;
+	public async getWebsite(website_id: number): Promise<ITrackedWebsite>;
 	/**
 	 * Get a website by a property
 	 * @param key The property to check
@@ -268,8 +300,8 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * const website = await getWebsite("domain", "example.com");
 	 * ```
 	 */
-	async getWebsite(key: keyof ITrackedWebsite, value: string): Promise<ITrackedWebsite>;
-	async getWebsite(
+	public async getWebsite(key: keyof ITrackedWebsite, value: string): Promise<ITrackedWebsite>;
+	public async getWebsite(
 		keyOrId?: keyof ITrackedWebsite | number,
 		value?: string
 	): Promise<ITrackedWebsite> {
@@ -284,11 +316,11 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		return await this.GET(`/website/${keyOrId}`);
 	}
 
-	async resetWebsite(website_id: number) {
+	public async resetWebsite(website_id: number) {
 		return await this.GET(`/website/${website_id}/reset`);
 	}
 
-	async deleteWebsite(website_id: number) {
+	public async deleteWebsite(website_id: number) {
 		return await this.DELETE(`/website/${website_id}`);
 	}
 
@@ -299,7 +331,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns An array of tracked websites
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
-	async getWebsites(options?: {
+	public async getWebsites(options?: {
 		include_all?: boolean;
 		user_id?: number;
 	}): Promise<ITrackedWebsite[]> {
@@ -316,7 +348,10 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns The website's stats from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/stats.js Relevant Umami source code}
 	 */
-	async getStats(website_id: number, period: TTimePeriod = "1d"): Promise<IStats> {
+	public async getStats(
+		website_id: number,
+		period: TTimePeriod = this._defaultPeriod
+	): Promise<IStats> {
 		return await this.GET(`/website/${website_id}/stats`, {
 			...convertPeriodToTime(period),
 		});
@@ -331,9 +366,9 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns The website's pageviews from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/pageviews.js Relevant Umami source code}
 	 */
-	async getPageViews(
+	public async getPageViews(
 		website_id: number,
-		period: TTimePeriod = "1d",
+		period: TTimePeriod = this._defaultPeriod,
 		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
 	): Promise<IPageViews> {
 		return await this.GET(`/website/${website_id}/pageviews`, {
@@ -351,9 +386,9 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns An array of events from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/events.js Relevant Umami source code}
 	 */
-	async getEvents(
+	public async getEvents(
 		website_id: number,
-		period: TTimePeriod = "1d",
+		period: TTimePeriod = this._defaultPeriod,
 		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
 	): Promise<IEvent[]> {
 		return await this.GET(`/website/${website_id}/events`, {
@@ -362,11 +397,11 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		});
 	}
 
-	async getEventsBy(
+	public async getEventsBy(
 		website_id: number,
 		filter: "type" | "name",
 		value: string,
-		period: TTimePeriod = "1d"
+		period: TTimePeriod = this._defaultPeriod
 	) {
 		const events = await this.getMetrics(website_id, period, { type: "event" });
 
@@ -397,9 +432,9 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns An array of metrics from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/metrics.js Relevant Umami source code}
 	 */
-	async getMetrics(
+	public async getMetrics(
 		website_id: number,
-		period: TTimePeriod = "1d",
+		period: TTimePeriod = this._defaultPeriod,
 		options: { type: TMetric } = { type: "url" }
 	): Promise<IMetric[]> {
 		return await this.GET(`/website/${website_id}/metrics`, {
@@ -408,7 +443,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		});
 	}
 
-	async getActiveVisitors(website_id: number) {
+	public async getActiveVisitors(website_id: number) {
 		return await this.GET(`/website/${website_id}/active`);
 	}
 
@@ -417,7 +452,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @returns An array of all the user accounts
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js Relevant Umami source code}
 	 */
-	async getAccounts() {
+	public async getAccounts() {
 		this.assertAdmin("You are not authorized to get the accounts.");
 		return await this.GET("/accounts");
 	}
