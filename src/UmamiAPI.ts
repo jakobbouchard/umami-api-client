@@ -290,7 +290,7 @@ export default class UmamiAPI {
 				if (!keyOrId) {
 					return websites[0];
 				}
-				return websites.find((website) => website[keyOrId] == value);
+				return websites.find((website) => website[keyOrId as keyof ITrackedWebsite] == value);
 			}
 
 			const { data } = await this._axios.get(`/website/${keyOrId}`);
