@@ -4,7 +4,7 @@ import axios from "axios";
 import { convertPeriodToTime } from "./utils/time-periods";
 
 type TUnit = "year" | "month" | "day" | "hour";
-type TMetric = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
+type TMetricType = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
 
 interface IAuthData {
 	token: string;
@@ -86,7 +86,7 @@ export default class UmamiAPI {
 	private _adminOnlyEndpoints: string[] = ["/accounts"];
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
-	private _defaultMetric: TMetric = "url";
+	private _defaultMetricType: TMetricType = "url";
 	private _defaultTZ: string = "America/Toronto";
 
 	public setDefaultPeriod(period: TTimePeriod) {
@@ -101,8 +101,8 @@ export default class UmamiAPI {
 		this._defaultTZ = tz;
 	}
 
-	public setDefaultMetric(metric: TMetric) {
-		this._defaultMetric = metric;
+	public setDefaultMetricType(metricType: TMetricType) {
+		this._defaultMetricType = metricType;
 	}
 
 	public async getCurrentUser() {
@@ -454,10 +454,10 @@ export default class UmamiAPI {
 	 */
 	public async getMetrics(
 		website_id: number,
-		options?: { period?: TTimePeriod; type?: TMetric }
+		options?: { period?: TTimePeriod; type?: TMetricType }
 	): Promise<IMetric[]> {
 		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
-		const type = options.type ?? this._defaultMetric;
+		const type = options.type ?? this._defaultMetricType;
 		const params = { start_at, end_at, type };
 
 		try {
