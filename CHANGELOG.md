@@ -6,10 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+This release contains a LOT of breaking changes.
+
+### Added
+
+- `setDefaultUnit(...)` – Set the default unit of time when getting pageviews or events.
+- `setDefaultTZ(...)` – Set the default timezone when getting pageviews or events.
+- `setDefaultMetricType(...)` – Set the default type when getting metrics.
+- `getWebsiteBy(...)` – Replaces part of the functionality of `getWebsite(...)`.
+
 ### Changed
 
-- [BREAKING] There previously were 2 classes, now there is only one, that throws errors if you are not logged in instead.
-- [BREAKING] The `period` parameter is now in the options, to make it optional.
+- [BREAKING] Authentication is done directly in the constructor now.
+- [BREAKING] There previously were 2 classes, now there is only one.
+- [BREAKING] Rename `getPageViews(...)` to `getPageviews(...)`
+- [BREAKING] The `period` parameter is now in the options, to make it optional. This affects `getStats(...)`, `getPageviews(...)`, `getEvents(...)`, `getEventsBy(...)` and `getMetrics(...)`.
+- [BREAKING] The `getWebsite(...)` function was split.
+- Better error messages
+
+### Removed
+
+- `getDefaultPeriod(...)` as it's unnecessary.
 
 ## [0.1.5] - 2022-07-15
 
