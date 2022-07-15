@@ -4,6 +4,15 @@ import { TTimePeriod, convertPeriodToTime } from "./utils/time-periods";
 type TUnit = "year" | "month" | "day" | "hour";
 type TMetric = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
 
+interface IAuthData {
+	token: string;
+	user: {
+		user_id: number;
+		username: string;
+		is_admin: boolean;
+	};
+}
+
 interface ITrackedWebsite {
 	website_id: number;
 	website_uuid: string;
@@ -21,14 +30,16 @@ interface IStats {
 	totaltime: { value: number; change: number };
 }
 
-/**
- * @param pageviews.t The time period of the data
- * @param pageviews.y The amount of page views in the time period
- * @param sessions.t The time period of the data
- * @param sessions.y The amount of sessions in the time period
- */
 interface IPageViews {
+	/**
+	 * @param t The time period of the data
+	 * @param y The amount of page views in the time period
+	 */
 	pageviews: { t: string; y: number }[];
+	/**
+	 * @param t The time period of the data
+	 * @param y The amount of sessions in the time period
+	 */
 	sessions: { t: string; y: number }[];
 }
 
@@ -79,21 +90,21 @@ class BaseUmamiAPI {
 	}
 
 	/**
-	 * Collects an event
-	 * @param type The type of event to send
-	 * @param payload The payload of the event
-	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
-	 * @see https://umami.is/docs/api – `POST /api/collect`
-	 */
-	async collect(type: "event", payload: IEventPayload, userAgent?: string): Promise<string>;
-	/**
 	 * Collects a pageview
 	 * @param type The type of event to send
 	 * @param payload The payload of the pageview
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
-	 * @see https://umami.is/docs/api – `POST /api/collect`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L75 Relevant Umami source code}
 	 */
 	async collect(type: "pageview", payload: IPageViewPayload, userAgent?: string): Promise<string>;
+	/**
+	 * Collects an event
+	 * @param type The type of event to send
+	 * @param payload The payload of the event
+	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L77 Relevant Umami source code}
+	 */
+	async collect(type: "event", payload: IEventPayload, userAgent?: string): Promise<string>;
 	async collect(
 		type: "pageview" | "event",
 		payload: IEventPayload | IPageViewPayload,
@@ -124,7 +135,7 @@ export default class UmamiAPI extends BaseUmamiAPI {
 	 * @param username Username of the user you want to login
 	 * @param password Password of the user you want to login
 	 * @returns An authenticated class instance, able to use more functionality.
-	 * @see https://umami.is/docs/api – `POST /api/auth/login`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
 	async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
 		try {
@@ -133,22 +144,31 @@ export default class UmamiAPI extends BaseUmamiAPI {
 				password,
 			});
 
-			return new AuthenticatedUmamiAPI(this._server, data.token);
+			return new AuthenticatedUmamiAPI(this._server, data);
 		} catch (error) {
-			throw new Error(`Login failed`, { cause: error.toString() });
+			throw new Error("Login failed", { cause: error.toString() });
 		}
 	}
 }
 
 class AuthenticatedUmamiAPI extends BaseUmamiAPI {
-	private _token: string;
+	protected _token: IAuthData["token"];
+	public user: IAuthData["user"];
+	public is_admin: boolean;
 
-	constructor(server: string, token: string) {
+	constructor(server: string, auth: IAuthData) {
 		super(server);
-		this._token = token;
+		this._token = auth.token;
+		this.user = auth.user;
 	}
 
-	private async post(endpoint: string, options?: any) {
+	protected assertAdmin(message: string) {
+		if (!this.is_admin) {
+			throw new Error(message);
+		}
+	}
+
+	protected async POST(endpoint: string, options?: any) {
 		const url = `https://${this._server}/api${endpoint}`;
 
 		try {
@@ -161,7 +181,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		}
 	}
 
-	private async get(endpoint: string, options?: any) {
+	protected async GET(endpoint: string, options?: any) {
 		const params = options ? new URLSearchParams(options).toString() : "";
 		const url = `https://${this._server}/api${endpoint}?${params}`;
 
@@ -175,45 +195,73 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 		}
 	}
 
+	protected async DELETE(endpoint: string) {
+		const url = `https://${this._server}/api${endpoint}`;
+
+		try {
+			const { data } = await axios.delete(url, {
+				headers: { Authorization: `Bearer ${this._token}` },
+			});
+			return data;
+		} catch (error) {
+			throw new Error(`DELETE request to ${url} failed`, { cause: error.toString() });
+		}
+	}
+
 	/**
-	 * Creates a new website in the dashboard and returns its information.
+	 * Creates a new website and returns its information.
 	 * @param options.domain The domain name of the website (e.g. umami.is)
 	 * @param options.name The name of the website (usually the same as the domain)
 	 * @param options.enable_share_url Whether or not to enable public sharing.
-	 * @param options.public Defaults to false
 	 * @returns The new website's information
-	 * @see https://umami.is/docs/api – `POST /api/website`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/index.js#L36 Relevant Umami source code}
 	 */
 	async createWebsite(options: {
 		domain: string;
 		name: string;
 		enable_share_url?: boolean;
-		public?: boolean;
 	}): Promise<ITrackedWebsite> {
-		return await this.post("/website", options);
+		return await this.POST("/website", options);
 	}
 
 	/**
-	 * Gets all the user's tracked websites
-	 * @returns An array of all the user's tracked websites
-	 * @see https://umami.is/docs/api – `GET /api/websites`
+	 * Updates a website and returns its information.
+	 * @param website_id The website's ID (not UUID)
+	 * @param options.domain The domain name of the website (e.g. umami.is)
+	 * @param options.name The name of the website (usually the same as the domain)
+	 * @param options.enable_share_url Whether or not to enable public sharing.
+	 * @returns The website's information
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/index.js#L30 Relevant Umami source code}
 	 */
-	async getWebsites(): Promise<ITrackedWebsite[]> {
-		return await this.get("/websites");
+	async updateWebsite(
+		website_id: number,
+		options: {
+			domain: string;
+			name: string;
+			enable_share_url?: boolean;
+		}
+	): Promise<ITrackedWebsite> {
+		return await this.POST("/website", { website_id, ...options });
 	}
 
 	/**
 	 * Get the first website that gets returned by Umami
 	 * @returns The first website
-	 * @see https://umami.is/docs/api – `GET /api/websites`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
 	async getWebsite(): Promise<ITrackedWebsite>;
+	/**
+	 * Get the website by its ID (not UUID)
+	 * @returns The website
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
+	 */
+	async getWebsite(website_id: number): Promise<ITrackedWebsite>;
 	/**
 	 * Get a website by a property
 	 * @param key The property to check
 	 * @param value The value to check the property against
 	 * @returns The website
-	 * @see https://umami.is/docs/api – `GET /api/websites`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 * @example
 	 * Get a website by domain name
 	 * ```ts
@@ -221,14 +269,44 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * ```
 	 */
 	async getWebsite(key: keyof ITrackedWebsite, value: string): Promise<ITrackedWebsite>;
-	async getWebsite(key?: keyof ITrackedWebsite, value?: string): Promise<ITrackedWebsite> {
-		const websites = await this.getWebsites();
-
-		if (!key || !value) {
-			return websites[0];
+	async getWebsite(
+		keyOrId?: keyof ITrackedWebsite | number,
+		value?: string
+	): Promise<ITrackedWebsite> {
+		if ((!keyOrId && !value) || (keyOrId && value)) {
+			const websites = await this.getWebsites();
+			if (!keyOrId) {
+				return websites[0];
+			}
+			return websites.find((website) => website[keyOrId] == value);
 		}
 
-		return websites.find((website) => website[key] == value);
+		return await this.GET(`/website/${keyOrId}`);
+	}
+
+	async resetWebsite(website_id: number) {
+		return await this.GET(`/website/${website_id}/reset`);
+	}
+
+	async deleteWebsite(website_id: number) {
+		return await this.DELETE(`/website/${website_id}`);
+	}
+
+	/**
+	 * Gets tracked websites
+	 * @param options.include_all Whether or not to include all websites (admin only)
+	 * @param options.user_id The user to query websites from (admin only, if not your own user id)
+	 * @returns An array of tracked websites
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
+	 */
+	async getWebsites(options?: {
+		include_all?: boolean;
+		user_id?: number;
+	}): Promise<ITrackedWebsite[]> {
+		if (options.include_all || options.user_id) {
+			this.assertAdmin("You are not authorized to view these websites");
+		}
+		return await this.GET("/websites", options);
 	}
 
 	/**
@@ -236,10 +314,10 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @param website_id The website's ID (not UUID)
 	 * @param period The time period of stats to return
 	 * @returns The website's stats from the specified time period
-	 * @see https://umami.is/docs/api – `GET /api/website/{id}/stats`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/stats.js Relevant Umami source code}
 	 */
 	async getStats(website_id: number, period: TTimePeriod = "1d"): Promise<IStats> {
-		return await this.get(`/website/${website_id}/stats`, {
+		return await this.GET(`/website/${website_id}/stats`, {
 			...convertPeriodToTime(period),
 		});
 	}
@@ -251,14 +329,14 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @param options.unit The interval of time/precision of the returned pageviews
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
 	 * @returns The website's pageviews from the specified time period
-	 * @see https://umami.is/docs/api – `GET /api/website/{id}/stats`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/pageviews.js Relevant Umami source code}
 	 */
 	async getPageViews(
 		website_id: number,
 		period: TTimePeriod = "1d",
 		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
 	): Promise<IPageViews> {
-		return await this.get(`/website/${website_id}/pageviews`, {
+		return await this.GET(`/website/${website_id}/pageviews`, {
 			...convertPeriodToTime(period),
 			...options,
 		});
@@ -271,14 +349,14 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @param options.unit The interval of time/precision of the returned pageviews
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
 	 * @returns An array of events from the specified time period
-	 * @see https://umami.is/docs/api – `GET /api/website/{id}/events`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/events.js Relevant Umami source code}
 	 */
 	async getEvents(
 		website_id: number,
 		period: TTimePeriod = "1d",
 		options: { unit: TUnit; tz: string } = { unit: "hour", tz: "America/Toronto" }
 	): Promise<IEvent[]> {
-		return await this.get(`/website/${website_id}/events`, {
+		return await this.GET(`/website/${website_id}/events`, {
 			...convertPeriodToTime(period),
 			...options,
 		});
@@ -317,16 +395,30 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	 * @param period The time period of events to return
 	 * @param options.type The type of metric to get. Defaults to url
 	 * @returns An array of metrics from the specified time period
-	 * @see https://umami.is/docs/api – `GET /api/website/{id}/metrics`
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/metrics.js Relevant Umami source code}
 	 */
 	async getMetrics(
 		website_id: number,
 		period: TTimePeriod = "1d",
 		options: { type: TMetric } = { type: "url" }
 	): Promise<IMetric[]> {
-		return await this.get(`/website/${website_id}/metrics`, {
+		return await this.GET(`/website/${website_id}/metrics`, {
 			...convertPeriodToTime(period),
 			...options,
 		});
+	}
+
+	async getActiveVisitors(website_id: number) {
+		return await this.GET(`/website/${website_id}/active`);
+	}
+
+	/**
+	 * Gets all the user accounts
+	 * @returns An array of all the user accounts
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js Relevant Umami source code}
+	 */
+	async getAccounts() {
+		this.assertAdmin("You are not authorized to get the accounts.");
+		return await this.GET("/accounts");
 	}
 }
