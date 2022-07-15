@@ -82,10 +82,8 @@ class BaseUmamiAPI {
 			if (status < 200 || status >= 300) {
 				throw new Error(`Status code: ${status} - Response: ${data}`);
 			}
-			console.log(data, status);
 			return data;
 		} catch (error) {
-			console.error(error);
 			throw new Error(`Collect failed`, { cause: error });
 		}
 	}
@@ -105,7 +103,6 @@ export default class UmamiAPI extends BaseUmamiAPI {
 
 			return new AuthenticatedUmamiAPI(this._server, data.token);
 		} catch (error) {
-			console.error(error);
 			throw new Error(`Login failed`, { cause: error });
 		}
 	}
@@ -131,7 +128,6 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 			}
 			return data;
 		} catch (error) {
-			console.error(error);
 			throw new Error(`POST request to ${url} failed`, { cause: error });
 		}
 	}
@@ -149,7 +145,6 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 			}
 			return data;
 		} catch (error) {
-			console.error(error);
 			throw new Error(`GET request to ${url} failed`, { cause: error });
 		}
 	}
