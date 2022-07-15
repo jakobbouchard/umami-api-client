@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { TTimePeriod, convertPeriodToTime } from "./utils/time-periods";
 
 type TUnit = "year" | "month" | "day" | "hour";
@@ -79,6 +79,7 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 
 class BaseUmamiAPI {
 	protected _server: string;
+	protected _axios: AxiosInstance;
 
 	/**
 	 * @param server The Umami installation hostname (e.g. app.umami.is). The protocol, if present, will be removed.
@@ -87,7 +88,11 @@ class BaseUmamiAPI {
 		if (!server) {
 			throw new Error("A server hostname is required");
 		}
-		this._server = server.replace(/https?:\/\//, "");
+		this._server = server;
+		this._axios = axios.create({
+			baseURL: `https://${this._server.replace(/https?:\/\//, "")}/api`,
+			timeout: 1000,
+		});
 	}
 
 	/**
@@ -122,8 +127,8 @@ class BaseUmamiAPI {
 		}
 
 		try {
-			const { data } = await axios.post(
-				`https://${this._server}/api/collect`,
+			const { data } = await this._axios.post(
+				"/collect",
 				{ type, payload },
 				{ headers: { "User-Agent": userAgent } }
 			);
@@ -144,7 +149,7 @@ export default class UmamiAPI extends BaseUmamiAPI {
 	 */
 	public async auth(username: string, password: string): Promise<AuthenticatedUmamiAPI> {
 		try {
-			const { data } = await axios.post(`https://${this._server}/api/auth/login`, {
+			const { data } = await this._axios.post("/auth/login", {
 				username,
 				password,
 			});
@@ -158,16 +163,13 @@ export default class UmamiAPI extends BaseUmamiAPI {
 
 class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	protected _auth: IAuthData;
-	protected _axiosOptions: AxiosRequestConfig;
 	protected _defaultPeriod: TTimePeriod = "24h";
 	protected _lastCheck: number;
 
 	constructor(server: string, auth: IAuthData) {
 		super(server);
 		this._auth = auth;
-		this._axiosOptions = {
-			headers: { Authorization: `Bearer ${this._auth.token}` },
-		};
+		this._axios.defaults.headers.common["Authorization"] = `Bearer ${this._auth.token}`;
 		this._lastCheck = Date.now();
 	}
 
@@ -192,10 +194,7 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 	protected async verifyAuth() {
 		if (this._lastCheck + 60 * 60 * 1000 < Date.now()) {
 			try {
-				const { data } = await axios.get(
-					`https://${this._server}/api/auth/verify`,
-					this._axiosOptions
-				);
+				const { data } = await this._axios.get("/auth/verify");
 				this._auth.user = data;
 			} catch (error) {
 				throw new Error("Could not verify authentication", { cause: error.toString() });
@@ -205,38 +204,36 @@ class AuthenticatedUmamiAPI extends BaseUmamiAPI {
 
 	protected async POST(endpoint: string, payload: any) {
 		await this.verifyAuth();
-		const url = `https://${this._server}/api${endpoint}`;
 
 		try {
-			const { data } = await axios.post(url, payload, this._axiosOptions);
+			const { data } = await this._axios.post(endpoint, payload);
 			return data;
 		} catch (error) {
-			throw new Error(`POST request to ${url} failed`, { cause: error.toString() });
+			throw new Error(`POST request to /api${endpoint} failed`, { cause: error.toString() });
 		}
 	}
 
-	protected async GET(endpoint: string, options?: any) {
+	protected async GET(endpoint: string, params?: any) {
 		await this.verifyAuth();
-		const params = options ? new URLSearchParams(options).toString() : "";
-		const url = `https://${this._server}/api${endpoint}?${params}`;
 
 		try {
-			const { data } = await axios.get(url, this._axiosOptions);
+			const { data } = await this._axios.get(endpoint, { params });
 			return data;
 		} catch (error) {
-			throw new Error(`GET request to ${url} failed`, { cause: error.toString() });
+			throw new Error(`GET request to /api${endpoint} failed with params: ${params.toString()}`, {
+				cause: error.toString(),
+			});
 		}
 	}
 
 	protected async DELETE(endpoint: string) {
 		await this.verifyAuth();
-		const url = `https://${this._server}/api${endpoint}`;
 
 		try {
-			const { data } = await axios.delete(url, this._axiosOptions);
+			const { data } = await this._axios.delete(endpoint);
 			return data;
 		} catch (error) {
-			throw new Error(`DELETE request to ${url} failed`, { cause: error.toString() });
+			throw new Error(`DELETE request to /api${endpoint} failed`, { cause: error.toString() });
 		}
 	}
 
