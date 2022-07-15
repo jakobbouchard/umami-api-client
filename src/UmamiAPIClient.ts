@@ -3,6 +3,9 @@ import type { TTimePeriod } from "./utils/time-periods";
 import axios from "axios";
 import { convertPeriodToTime } from "./utils/time-periods";
 
+const DEFAULT_USER_AGENT =
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0";
+
 type TUnit = "year" | "month" | "day" | "hour";
 type TMetricType = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
 
@@ -79,6 +82,16 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 	event_value: string;
 }
 
+function _richError(message: string, cause?: any, options?: any) {
+	if (!options) options = "None specified";
+	options = JSON.stringify(options);
+
+	if (!cause) cause = "None specified";
+	cause = cause.toString();
+
+	return new Error(`${message}\nOptions: ${options}\nStacktrace:`, { cause });
+}
+
 /**
  * Umami API Client
  */
@@ -89,8 +102,9 @@ export default class UmamiAPIClient {
 	private _adminOnlyEndpoints: string[] = ["/accounts"];
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
-	private _defaultMetricType: TMetricType = "url";
 	private _defaultTZ: string = "America/Toronto";
+	private _defaultMetricType: TMetricType = "url";
+	private _defaultUserAgent: string = DEFAULT_USER_AGENT;
 
 	public setDefaultPeriod(period: TTimePeriod) {
 		this._defaultPeriod = period;
@@ -108,18 +122,12 @@ export default class UmamiAPIClient {
 		this._defaultMetricType = metricType;
 	}
 
-	public async getCurrentUser() {
-		return (await this._auth).data.user;
+	public setDefaultUserAgent(userAgent: string) {
+		this._defaultUserAgent = userAgent;
 	}
 
-	private _richError(message: string, cause?: any, options?: any) {
-		if (!options) options = "None specified";
-		options = JSON.stringify(options);
-
-		if (!cause) cause = "None specified";
-		cause = cause.toString();
-
-		return new Error(`${message}\nOptions: ${options}\nStacktrace:`, { cause });
+	public async getCurrentUser() {
+		return (await this._auth).data.user;
 	}
 
 	/**
@@ -142,7 +150,7 @@ export default class UmamiAPIClient {
 		this._axios.interceptors.request.use(this._verifyAuth.bind(this));
 
 		this._auth = this._axios.post("/auth/login", { username, password }).catch((error) => {
-			throw this._richError("Login failed", error, { server, username });
+			throw _richError("Login failed", error, { server, username });
 		});
 	}
 
@@ -170,7 +178,7 @@ export default class UmamiAPIClient {
 			try {
 				await this._axios.get("/auth/verify");
 			} catch (error) {
-				throw this._richError("Could not verify authentication", error, { axiosConfig: config });
+				throw _richError("Could not verify authentication", error, { axiosConfig: config });
 			}
 		}
 
@@ -200,7 +208,7 @@ export default class UmamiAPIClient {
 	public async collect(
 		type: "pageview" | "event",
 		payload: IEventPayload | IPageViewPayload,
-		userAgent: string = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0"
+		userAgent: string = this._defaultUserAgent
 	): Promise<string> {
 		try {
 			if (!userAgent) {
@@ -214,7 +222,43 @@ export default class UmamiAPIClient {
 			);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not collect", error, { type, payload, userAgent });
+			throw _richError("Could not collect", error, { type, payload, userAgent });
+		}
+	}
+
+	public static async collect(
+		server: string,
+		type: "pageview",
+		payload: IPageViewPayload,
+		userAgent?: string
+	): Promise<string>;
+	public static async collect(
+		server: string,
+		type: "event",
+		payload: IEventPayload,
+		userAgent?: string
+	): Promise<string>;
+	public static async collect(
+		server: string,
+		type: "pageview" | "event",
+		payload: IEventPayload | IPageViewPayload,
+		userAgent: string = DEFAULT_USER_AGENT
+	) {
+		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
+
+		try {
+			if (!userAgent) {
+				throw new Error("A user agent is required. See https://umami.is/docs/api");
+			}
+
+			const { data } = await axios.post(
+				`https://${server}/api/collect`,
+				{ type, payload },
+				{ headers: { "User-Agent": userAgent } }
+			);
+			return data;
+		} catch (error) {
+			throw _richError("Could not collect", error, { type, payload, userAgent });
 		}
 	}
 
@@ -235,7 +279,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.post("/website", options);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not create website", error, { options });
+			throw _richError("Could not create website", error, { options });
 		}
 	}
 
@@ -260,7 +304,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.post("/website", { website_id, ...options });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not update website", error, { website_id, options });
+			throw _richError("Could not update website", error, { website_id, options });
 		}
 	}
 
@@ -286,7 +330,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}`);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get website", error, { website_id });
+			throw _richError("Could not get website", error, { website_id });
 		}
 	}
 
@@ -306,7 +350,7 @@ export default class UmamiAPIClient {
 		const websites = await this.getWebsites();
 		const website = websites.find((website) => website[key] == value);
 		if (!website) {
-			throw this._richError("Could not find website", null, { key, value });
+			throw _richError("Could not find website", null, { key, value });
 		}
 		return website;
 	}
@@ -316,7 +360,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.post(`/website/${website_id}/reset`);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not reset website", error, { website_id });
+			throw _richError("Could not reset website", error, { website_id });
 		}
 	}
 
@@ -324,7 +368,7 @@ export default class UmamiAPIClient {
 		try {
 			await this._axios.delete(`/website/${website_id}`);
 		} catch (error) {
-			throw this._richError("Could not delete website", error, { website_id });
+			throw _richError("Could not delete website", error, { website_id });
 		}
 	}
 
@@ -343,7 +387,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get("/websites", { params: options });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get websites", error, { options });
+			throw _richError("Could not get websites", error, { options });
 		}
 	}
 
@@ -362,7 +406,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}/stats`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get stats", error, { website_id, params });
+			throw _richError("Could not get stats", error, { website_id, params });
 		}
 	}
 
@@ -388,7 +432,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}/pageviews`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get pageviews", error, { website_id, params });
+			throw _richError("Could not get pageviews", error, { website_id, params });
 		}
 	}
 
@@ -414,7 +458,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}/events`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get events", error, { website_id, params });
+			throw _richError("Could not get events", error, { website_id, params });
 		}
 	}
 
@@ -443,7 +487,7 @@ export default class UmamiAPIClient {
 				return total;
 			}, 0);
 		} catch (error) {
-			throw this._richError("Could not get events", error, { website_id, options });
+			throw _richError("Could not get events", error, { website_id, options });
 		}
 	}
 
@@ -467,7 +511,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}/metrics`, { params });
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get metrics", error, { website_id, params });
+			throw _richError("Could not get metrics", error, { website_id, params });
 		}
 	}
 
@@ -476,7 +520,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get(`/website/${website_id}/active`);
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get active visitors", error, { website_id });
+			throw _richError("Could not get active visitors", error, { website_id });
 		}
 	}
 
@@ -492,7 +536,7 @@ export default class UmamiAPIClient {
 			const { data } = await this._axios.get("/accounts");
 			return data;
 		} catch (error) {
-			throw this._richError("Could not get accounts", error);
+			throw _richError("Could not get accounts", error);
 		}
 	}
 }
