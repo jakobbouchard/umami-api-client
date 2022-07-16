@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This release contains a LOT of breaking changes.
+## [0.2.0] - 2022-07-15
+
+This release contains a LOT of breaking changes. Also a lot of new stuff!
 
 ### Added
 
-- `static UmamiAPIClient.collect(...)` – You can collect pageviews and event without initializing a client.
+- `static UmamiAPIClient.collect(...)` – Collect pageviews and events without initializing a client.
 - `setDefaultUnit(...)` – Set the default unit of time when getting pageviews or events.
 - `setDefaultTZ(...)` – Set the default timezone when getting pageviews or events.
 - `setDefaultMetricType(...)` – Set the default type when getting metrics.
-- `setDefaultUserAgent(...)` – Set the default user agent when calling `collect(...)` on an instance. Does not affect the new static method.
+- `setDefaultUserAgent(...)` – Set the default user agent when calling `collect(...)` on an instance. Does **not** affect the new static method.
 - `getWebsiteBy(...)` – Replaces part of the functionality of `getWebsite(...)`.
 
 ### Changed

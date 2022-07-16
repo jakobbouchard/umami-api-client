@@ -69,6 +69,18 @@ interface IMetric {
 	y: number;
 }
 
+interface IActiveVisitor {
+	x: number;
+}
+
+interface IUserAccount {
+	user_id: number;
+	username: string;
+	is_admin: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
 interface IPageViewPayload {
 	website: string;
 	url: string;
@@ -82,7 +94,7 @@ interface IEventPayload extends Omit<IPageViewPayload, "referrer"> {
 	event_value: string;
 }
 
-function _richError(message: string, cause?: any, options?: any) {
+function _richError(message: string, cause?: any, options?: any): Error {
 	if (!options) options = "None specified";
 	options = JSON.stringify(options);
 
@@ -106,27 +118,27 @@ export default class UmamiAPIClient {
 	private _defaultMetricType: TMetricType = "url";
 	private _defaultUserAgent: string = DEFAULT_USER_AGENT;
 
-	public setDefaultPeriod(period: TTimePeriod) {
+	public setDefaultPeriod(period: TTimePeriod): void {
 		this._defaultPeriod = period;
 	}
 
-	public setDefaultUnit(unit: TUnit) {
+	public setDefaultUnit(unit: TUnit): void {
 		this._defaultUnit = unit;
 	}
 
-	public setDefaultTZ(tz: string) {
+	public setDefaultTZ(tz: string): void {
 		this._defaultTZ = tz;
 	}
 
-	public setDefaultMetricType(metricType: TMetricType) {
+	public setDefaultMetricType(metricType: TMetricType): void {
 		this._defaultMetricType = metricType;
 	}
 
-	public setDefaultUserAgent(userAgent: string) {
+	public setDefaultUserAgent(userAgent: string): void {
 		this._defaultUserAgent = userAgent;
 	}
 
-	public async getCurrentUser() {
+	public async getCurrentUser(): Promise<IAuthData["user"]> {
 		return (await this._auth).data.user;
 	}
 
@@ -154,7 +166,7 @@ export default class UmamiAPIClient {
 		});
 	}
 
-	private async _verifyAuth(config: AxiosRequestConfig) {
+	private async _verifyAuth(config: AxiosRequestConfig): Promise<AxiosRequestConfig> {
 		if (config.url == "/auth/login" || config.url == "/collect") return config;
 
 		const auth = await this._auth;
@@ -211,9 +223,7 @@ export default class UmamiAPIClient {
 		userAgent: string = this._defaultUserAgent
 	): Promise<string> {
 		try {
-			if (!userAgent) {
-				throw new Error("A user agent is required. See https://umami.is/docs/api");
-			}
+			if (!userAgent) throw new Error("A user agent is required. See https://umami.is/docs/api");
 
 			const { data } = await this._axios.post(
 				"/collect",
@@ -226,12 +236,28 @@ export default class UmamiAPIClient {
 		}
 	}
 
+	/**
+	 * Collects a pageview
+	 * @param server The Umami installation hostname (e.g. app.umami.is). The protocol, if present, will be removed.
+	 * @param type The type of event to send
+	 * @param payload The payload of the pageview
+	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L75 Relevant Umami source code}
+	 */
 	public static async collect(
 		server: string,
 		type: "pageview",
 		payload: IPageViewPayload,
 		userAgent?: string
 	): Promise<string>;
+	/**
+	 * Collects an event
+	 * @param server The Umami installation hostname (e.g. app.umami.is). The protocol, if present, will be removed.
+	 * @param type The type of event to send
+	 * @param payload The payload of the event
+	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L77 Relevant Umami source code}
+	 */
 	public static async collect(
 		server: string,
 		type: "event",
@@ -243,13 +269,11 @@ export default class UmamiAPIClient {
 		type: "pageview" | "event",
 		payload: IEventPayload | IPageViewPayload,
 		userAgent: string = DEFAULT_USER_AGENT
-	) {
+	): Promise<string> {
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
 
 		try {
-			if (!userAgent) {
-				throw new Error("A user agent is required. See https://umami.is/docs/api");
-			}
+			if (!userAgent) throw new Error("A user agent is required. See https://umami.is/docs/api");
 
 			const { data } = await axios.post(
 				`https://${server}/api/collect`,
@@ -316,6 +340,7 @@ export default class UmamiAPIClient {
 	public async getWebsite(): Promise<ITrackedWebsite>;
 	/**
 	 * Get the website by its ID (not UUID)
+	 * @param website_id The website's ID (not UUID)
 	 * @returns The website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
 	 */
@@ -343,10 +368,13 @@ export default class UmamiAPIClient {
 	 * @example
 	 * Get a website by domain name
 	 * ```ts
-	 * const website = await getWebsiteBy(key: "domain", value: "example.com");
+	 * const website = await instance.getWebsiteBy("domain", "example.com");
 	 * ```
 	 */
-	public async getWebsiteBy(key: keyof ITrackedWebsite, value: string | number) {
+	public async getWebsiteBy(
+		key: keyof ITrackedWebsite,
+		value: string | number
+	): Promise<ITrackedWebsite> {
 		const websites = await this.getWebsites();
 		const website = websites.find((website) => website[key] == value);
 		if (!website) {
@@ -355,7 +383,12 @@ export default class UmamiAPIClient {
 		return website;
 	}
 
-	public async resetWebsite(website_id: number) {
+	/**
+	 * Resets a website's stats
+	 * @param website_id The website's ID (not UUID)
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/reset.js Relevant Umami source code}
+	 */
+	public async resetWebsite(website_id: number): Promise<ITrackedWebsite> {
 		try {
 			const { data } = await this._axios.post(`/website/${website_id}/reset`);
 			return data;
@@ -364,7 +397,12 @@ export default class UmamiAPIClient {
 		}
 	}
 
-	public async deleteWebsite(website_id: number) {
+	/**
+	 * Delete a website
+	 * @param website_id The website's ID (not UUID)
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
+	 */
+	public async deleteWebsite(website_id: number): Promise<void> {
 		try {
 			await this._axios.delete(`/website/${website_id}`);
 		} catch (error) {
@@ -462,10 +500,19 @@ export default class UmamiAPIClient {
 		}
 	}
 
+	/**
+	 * Gets the total number of events by a filter
+	 * @param website_id The website's ID (not UUID)
+	 * @param options.filter The field to filter by
+	 * @param options.value The value to match the field against
+	 * @param options.period The time period of events to return
+	 * @returns The total number of events matching the filter
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
+	 */
 	public async getEventsBy(
 		website_id: number,
 		options: { filter: "type" | "name"; value: string; period?: TTimePeriod }
-	) {
+	): Promise<number> {
 		try {
 			const events = await this.getMetrics(website_id, { period: options.period, type: "event" });
 
@@ -515,7 +562,13 @@ export default class UmamiAPIClient {
 		}
 	}
 
-	public async getActiveVisitors(website_id: number) {
+	/**
+	 * Gets the active visitors of a website
+	 * @param website_id The website's ID (not UUID)
+	 * @returns
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/active.js Relevant Umami source code}
+	 */
+	public async getActiveVisitors(website_id: number): Promise<IActiveVisitor[]> {
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/active`);
 			return data;
@@ -531,7 +584,7 @@ export default class UmamiAPIClient {
 	 * @returns An array of all the user accounts
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js Relevant Umami source code}
 	 */
-	public async getAccounts() {
+	public async getAccounts(): Promise<IUserAccount[]> {
 		try {
 			const { data } = await this._axios.get("/accounts");
 			return data;
