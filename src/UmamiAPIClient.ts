@@ -7,7 +7,15 @@ const DEFAULT_USER_AGENT =
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0) Gecko/20100101 Firefox/102.0";
 
 type TUnit = "year" | "month" | "day" | "hour";
-type TMetricType = "url" | "referrer" | "browser" | "os" | "device" | "country" | "event";
+type TMetricType =
+	| "url"
+	| "referrer"
+	| "browser"
+	| "os"
+	| "device"
+	| "country"
+	| "event"
+	| "language";
 
 interface IAuthData {
 	token: string;
@@ -50,7 +58,7 @@ interface IPageViews {
 }
 
 /**
- * @param x The name of the event (The type is only available via the metrics)
+ * @param x The name of the event
  * @param t The time period of the data
  * @param y The amount of events in the time period
  */
@@ -111,7 +119,6 @@ export default class UmamiAPIClient {
 	private _axios: AxiosInstance;
 	private _auth: Promise<AxiosResponse<IAuthData>>;
 	private _lastAuthCheck: number = Date.now();
-	private _adminOnlyEndpoints: string[] = ["/accounts"];
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
 	private _defaultTZ: string = "America/Toronto";
@@ -174,15 +181,6 @@ export default class UmamiAPIClient {
 		config.headers = { ...config.headers, Authorization: `Bearer ${auth.data.token}` };
 
 		if (config.url == "/auth/verify") return config;
-
-		let admin = this._adminOnlyEndpoints.includes(config.url);
-		if (config.url == "/websites" && !!(config.params?.include_all || config.params?.user_id)) {
-			admin = true;
-		}
-
-		if (admin && !auth.data.user.is_admin) {
-			throw new Error("You must be an administrator to use this function");
-		}
 
 		if (this._lastAuthCheck + 60 * 60 * 1000 < Date.now()) {
 			this._lastAuthCheck = Date.now();
@@ -365,6 +363,7 @@ export default class UmamiAPIClient {
 	 * @param value The value to check the property against
 	 * @returns The website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
+	 *
 	 * @example
 	 * Get a website by domain name
 	 * ```ts
@@ -375,6 +374,23 @@ export default class UmamiAPIClient {
 		key: keyof ITrackedWebsite,
 		value: string | number
 	): Promise<ITrackedWebsite> {
+		if (key == "share_id") {
+			try {
+				const { data } = await this._axios.get(`/share/${value}`);
+				return await this.getWebsite(data.websiteId);
+			} catch (error) {
+				throw _richError("Could not find website", error, { key, value });
+			}
+		}
+
+		if (key == "website_id") {
+			try {
+				return await this.getWebsite(value as number);
+			} catch (error) {
+				throw _richError("Could not find website", error, { key, value });
+			}
+		}
+
 		const websites = await this.getWebsites();
 		const website = websites.find((website) => website[key] == value);
 		if (!website) {
@@ -433,12 +449,29 @@ export default class UmamiAPIClient {
 	 * Gets the stats of a website from a specified time period using it's ID
 	 * @param website_id The website's ID (not UUID)
 	 * @param options.period The time period of stats to return
+	 * @param options.url Filter stats by URL
+	 * @param options.referrer Filter stats by referrer
+	 * @param options.os Filter stats by OS
+	 * @param options.browser Filter stats by browser
+	 * @param options.device Filter stats by device
+	 * @param options.country Filter stats by country
 	 * @returns The website's stats from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/stats.js Relevant Umami source code}
 	 */
-	public async getStats(website_id: number, options?: { period?: TTimePeriod }): Promise<IStats> {
+	public async getStats(
+		website_id: number,
+		options?: {
+			period?: TTimePeriod;
+			url?: string;
+			referrer?: string;
+			os?: string;
+			browser?: string;
+			device?: string;
+			country?: string;
+		}
+	): Promise<IStats> {
 		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
-		const params = { start_at, end_at };
+		const params = { ...options, start_at, end_at };
 
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/stats`, { params });
@@ -454,17 +487,33 @@ export default class UmamiAPIClient {
 	 * @param options.period The time period of pageviews to return
 	 * @param options.unit The interval of time/precision of the returned pageviews
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
+	 * @param options.url Filter pageviews by URL
+	 * @param options.referrer Filter pageviews by referrer
+	 * @param options.os Filter pageviews by OS
+	 * @param options.browser Filter pageviews by browser
+	 * @param options.device Filter pageviews by device
+	 * @param options.country Filter pageviews by country
 	 * @returns The website's pageviews from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/pageviews.js Relevant Umami source code}
 	 */
 	public async getPageviews(
 		website_id: number,
-		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string }
+		options?: {
+			period?: TTimePeriod;
+			unit?: TUnit;
+			tz?: string;
+			url?: string;
+			referrer?: string;
+			os?: string;
+			browser?: string;
+			device?: string;
+			country?: string;
+		}
 	): Promise<IPageViews> {
 		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
 		const unit = options.unit ?? this._defaultUnit;
 		const tz = options.tz ?? this._defaultTZ;
-		const params = { start_at, end_at, unit, tz };
+		const params = { ...options, start_at, end_at, unit, tz };
 
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/pageviews`, { params });
@@ -480,17 +529,19 @@ export default class UmamiAPIClient {
 	 * @param options.period The time period of events to return
 	 * @param options.unit The interval of time/precision of the returned events
 	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
+	 * @param options.url The url where the event happened.
+	 * @param options.event_type The type of event to request.
 	 * @returns An array of events from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/events.js Relevant Umami source code}
 	 */
 	public async getEvents(
 		website_id: number,
-		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string }
+		options?: { period?: TTimePeriod; unit?: TUnit; tz?: string; url?: string; event_type?: string }
 	): Promise<IEvent[]> {
 		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
 		const unit = options.unit ?? this._defaultUnit;
 		const tz = options.tz ?? this._defaultTZ;
-		const params = { start_at, end_at, unit, tz };
+		const params = { start_at, end_at, unit, tz, url: options.url, event_type: options.event_type };
 
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/events`, { params });
@@ -509,32 +560,29 @@ export default class UmamiAPIClient {
 	 * @returns The total number of events matching the filter
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
-	public async getEventsBy(
+	public async getEventsByName(
 		website_id: number,
-		options: { filter: "type" | "name"; value: string; period?: TTimePeriod }
-	): Promise<number> {
+		options: {
+			name: string;
+			period?: TTimePeriod;
+			unit?: TUnit;
+			tz?: string;
+			url?: string;
+			event_type?: string;
+		}
+	): Promise<IEvent[]> {
 		try {
-			const events = await this.getMetrics(website_id, { period: options.period, type: "event" });
+			const events = await this.getEvents(website_id, {
+				period: options.period,
+				unit: options.unit,
+				tz: options.tz,
+				url: options.url,
+				event_type: options.event_type,
+			});
 
-			return events.reduce((total, { x, y }) => {
-				const [type, name] = x.split("\t");
-				switch (options.filter) {
-					case "type":
-						if (type == options.value) {
-							return total + y;
-						}
-						break;
-
-					case "name":
-						if (name == options.value) {
-							return total + y;
-						}
-						break;
-				}
-				return total;
-			}, 0);
+			return events.filter((event) => event.x == options.name);
 		} catch (error) {
-			throw _richError("Could not get events", error, { website_id, options });
+			throw _richError("Could not get events by name", error, { website_id, options });
 		}
 	}
 
@@ -543,16 +591,31 @@ export default class UmamiAPIClient {
 	 * @param website_id The website's ID (not UUID)
 	 * @param options.period The time period of events to return
 	 * @param options.type The type of metric to get. Defaults to url
+	 * @param options.url Filter metrics by URL
+	 * @param options.referrer Filter metrics by referrer
+	 * @param options.os Filter metrics by OS
+	 * @param options.browser Filter metrics by browser
+	 * @param options.device Filter metrics by device
+	 * @param options.country Filter metrics by country
 	 * @returns An array of metrics from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/metrics.js Relevant Umami source code}
 	 */
 	public async getMetrics(
 		website_id: number,
-		options?: { period?: TTimePeriod; type?: TMetricType }
+		options?: {
+			period?: TTimePeriod;
+			type?: TMetricType;
+			url?: string;
+			referrer?: string;
+			os?: string;
+			browser?: string;
+			device?: string;
+			country?: string;
+		}
 	): Promise<IMetric[]> {
 		const { start_at, end_at } = convertPeriodToTime(options.period ?? this._defaultPeriod);
 		const type = options.type ?? this._defaultMetricType;
-		const params = { start_at, end_at, type };
+		const params = { ...options, start_at, end_at, type };
 
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/metrics`, { params });
@@ -580,7 +643,67 @@ export default class UmamiAPIClient {
 	/*** ADMIN ONLY FUNCTIONS ***/
 
 	/**
-	 * Gets all the user accounts
+	 * Creates a user account (admin only)
+	 * @param options.username The username
+	 * @param options.password The password
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/index.js Relevant Umami source code}
+	 */
+	public async createAccount(options: {
+		username: string;
+		password: string;
+	}): Promise<IUserAccount> {
+		try {
+			const { data } = await this._axios.post("/account", options);
+			return data;
+		} catch (error) {
+			throw _richError("Could not create account", error, { options });
+		}
+	}
+
+	/**
+	 * Updates a user account
+	 * @param user_id User ID to update
+	 * @param options.username New username (admin only)
+	 * @param options.password New password
+	 * @param options.is_admin New admin status (admin only)
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/index.js Relevant Umami source code}
+	 */
+	public async updateAccount(
+		user_id: number,
+		options: { username: string; password: string; is_admin: boolean }
+	): Promise<IUserAccount> {
+		try {
+			const { data } = await this._axios.post("/account", { user_id, ...options });
+			return data;
+		} catch (error) {
+			throw _richError("Could not update account", error, { user_id, options });
+		}
+	}
+
+	/**
+	 * Updates a user account password
+	 * @param user_id User ID to update
+	 * @param options.current_password Current password
+	 * @param options.new_password New password
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/password.js Relevant Umami source code}
+	 */
+	public async changePassword(
+		user_id: number,
+		options: { current_password: string; new_password: string }
+	): Promise<IUserAccount> {
+		try {
+			const { data } = await this._axios.post("/account", { user_id, ...options });
+			return data;
+		} catch (error) {
+			throw _richError("Could not update password", error, { user_id, options });
+		}
+	}
+
+	/**
+	 * Gets all the user accounts (admin only)
 	 * @returns An array of all the user accounts
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js Relevant Umami source code}
 	 */
@@ -590,6 +713,34 @@ export default class UmamiAPIClient {
 			return data;
 		} catch (error) {
 			throw _richError("Could not get accounts", error);
+		}
+	}
+
+	/**
+	 * Gets a user account (admin only)
+	 * @param user_id The user ID
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/[id].js Relevant Umami source code}
+	 */
+	public async getAccount(user_id: number): Promise<IUserAccount> {
+		try {
+			const { data } = await this._axios.get(`/account/${user_id}`);
+			return data;
+		} catch (error) {
+			throw _richError("Could not get account", error, { user_id });
+		}
+	}
+
+	/**
+	 * Deletes a user account (admin only)
+	 * @param user_id The user ID
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/[id].js Relevant Umami source code}
+	 */
+	public async deleteAccount(user_id: number): Promise<void> {
+		try {
+			await this._axios.delete(`/account/${user_id}`);
+		} catch (error) {
+			throw _richError("Could not get account", error, { user_id });
 		}
 	}
 }
