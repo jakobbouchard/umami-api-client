@@ -116,8 +116,8 @@ function _richError(message: string, cause?: any, options?: any): Error {
  * Umami API Client
  */
 export default class UmamiAPIClient {
-	private _axios: AxiosInstance;
-	private _auth: Promise<AxiosResponse<IAuthData>>;
+	private readonly _axios: AxiosInstance;
+	private readonly _auth: Promise<AxiosResponse<IAuthData>>;
 	private _lastAuthCheck: number = Date.now();
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
@@ -695,7 +695,7 @@ export default class UmamiAPIClient {
 		options: { current_password: string; new_password: string }
 	): Promise<IUserAccount> {
 		try {
-			const { data } = await this._axios.post("/account", { user_id, ...options });
+			const { data } = await this._axios.post("/password", { user_id, ...options });
 			return data;
 		} catch (error) {
 			throw _richError("Could not update password", error, { user_id, options });
@@ -740,7 +740,7 @@ export default class UmamiAPIClient {
 		try {
 			await this._axios.delete(`/account/${user_id}`);
 		} catch (error) {
-			throw _richError("Could not get account", error, { user_id });
+			throw _richError("Could not delete account", error, { user_id });
 		}
 	}
 }
