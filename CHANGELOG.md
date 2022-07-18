@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2022-07-18
+
+### Fixes
+
+- `changePassword(...)` pointed to the wrong endpoint.
+
 ## [0.3.0] - 2022-07-15
 
 This release contains a small breaking change. And all the available endpoints now!
