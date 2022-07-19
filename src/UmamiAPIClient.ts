@@ -562,14 +562,8 @@ export default class UmamiAPIClient {
 	 */
 	public async getEventsByName(
 		website_id: number,
-		options: {
-			name: string;
-			period?: TTimePeriod;
-			unit?: TUnit;
-			tz?: string;
-			url?: string;
-			event_type?: string;
-		}
+		name: string,
+		options: { period?: TTimePeriod; unit?: TUnit; tz?: string; url?: string; event_type?: string }
 	): Promise<IEvent[]> {
 		try {
 			const events = await this.getEvents(website_id, {
@@ -580,7 +574,7 @@ export default class UmamiAPIClient {
 				event_type: options.event_type,
 			});
 
-			return events.filter((event) => event.x == options.name);
+			return events.filter((event) => event.x == name);
 		} catch (error) {
 			throw _richError("Could not get events by name", error, { website_id, options });
 		}
