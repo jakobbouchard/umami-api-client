@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `returnClasses` options in API Client constructor. Enabling this returns classes when getting websites or accounts. Example:
+
+```ts
+import UmamiAPIClient from "umami-api";
+
+const umami = new UmamiAPIClient("stats.example.com", "admin", "1234");
+const website = umami.getWebsite();
+website.update({
+	domain: "test.com",
+});
+```
+
 ### Changes
 
 - `getEventsByName(...)`'s `name` parameter has been removed from its `options` object, because its uh a bit more logic isn't it?
@@ -25,7 +39,7 @@ This release contains a small breaking change. And all the available endpoints n
 ### Added
 
 - `getEventsByName(...)` – Get events by their name/value. Now with full info!
-- [**Admin only**] `createAccount(...)` – Create a user account. 
+- [**Admin only**] `createAccount(...)` – Create a user account.
 - `updateAccount(...)` – Update account info. `username` and `is_admin` can only be changed by admins.
 - `changePassword(...)` – Change your password.
 - [**Admin only**] `getAccount(...)` – Get a user account.

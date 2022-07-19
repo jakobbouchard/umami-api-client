@@ -112,12 +112,241 @@ function _richError(message: string, cause?: any, options?: any): Error {
 	return new Error(`${message}\nOptions: ${options}\nStacktrace:`, { cause });
 }
 
+class TrackedWebsite {
+	private readonly _apiClient: UmamiAPIClient;
+	public readonly website_id: number;
+	public readonly website_uuid: string;
+	public user_id: number;
+	public name: string;
+	public domain: string;
+	public share_id: string | null;
+	public created_at: string;
+
+	constructor(apiClient: UmamiAPIClient, data: ITrackedWebsite) {
+		this._apiClient = apiClient;
+		Object.assign(this, data);
+	}
+
+	/**
+	 * Updates the website.
+	 * @param options.domain The domain name of the website (e.g. umami.is)
+	 * @param options.name The name of the website (usually the same as the domain)
+	 * @param options.enable_share_url Whether or not to enable public sharing.
+	 * @returns
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/index.js#L30 Relevant Umami source code}
+	 */
+	public async update(options: {
+		domain: string;
+		name: string;
+		enable_share_url?: boolean;
+	}): Promise<TrackedWebsite> {
+		const data = await this._apiClient.updateWebsite(this.website_id, options);
+		Object.assign(this, data);
+		return this;
+	}
+
+	/**
+	 * Resets the website's stats
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/reset.js Relevant Umami source code}
+	 */
+	public async reset(): Promise<TrackedWebsite> {
+		await this._apiClient.resetWebsite(this.website_id);
+		return this;
+	}
+
+	/**
+	 * Deletes the website
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
+	 */
+	public async delete(): Promise<void> {
+		await this._apiClient.deleteWebsite(this.website_id);
+	}
+
+	/**
+	 * Gets the stats of the website from a specified time period
+	 * @param options.period The time period of stats to return
+	 * @param options.url Filter stats by URL
+	 * @param options.referrer Filter stats by referrer
+	 * @param options.os Filter stats by OS
+	 * @param options.browser Filter stats by browser
+	 * @param options.device Filter stats by device
+	 * @param options.country Filter stats by country
+	 * @returns The website's stats from the specified time period
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/stats.js Relevant Umami source code}
+	 */
+	public async getStats(options?: {
+		period?: TTimePeriod;
+		url?: string;
+		referrer?: string;
+		os?: string;
+		browser?: string;
+		device?: string;
+		country?: string;
+	}): Promise<IStats> {
+		return await this._apiClient.getStats(this.website_id, options);
+	}
+
+	/**
+	 * Gets the pageviews of the website from a specified time period
+	 * @param options.period The time period of pageviews to return
+	 * @param options.unit The interval of time/precision of the returned pageviews
+	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
+	 * @param options.url Filter pageviews by URL
+	 * @param options.referrer Filter pageviews by referrer
+	 * @param options.os Filter pageviews by OS
+	 * @param options.browser Filter pageviews by browser
+	 * @param options.device Filter pageviews by device
+	 * @param options.country Filter pageviews by country
+	 * @returns The website's pageviews from the specified time period
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/pageviews.js Relevant Umami source code}
+	 */
+	public async getPageviews(options?: {
+		period?: TTimePeriod;
+		unit?: TUnit;
+		tz?: string;
+		url?: string;
+		referrer?: string;
+		os?: string;
+		browser?: string;
+		device?: string;
+		country?: string;
+	}): Promise<IPageViews> {
+		return await this._apiClient.getPageviews(this.website_id, options);
+	}
+
+	/**
+	 * Gets the events of the website from a specified time period
+	 * @param options.period The time period of events to return
+	 * @param options.unit The interval of time/precision of the returned events
+	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
+	 * @param options.url The url where the event happened.
+	 * @param options.event_type The type of event to request.
+	 * @returns An array of events from the specified time period
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/events.js Relevant Umami source code}
+	 */
+	public async getEvents(options?: {
+		period?: TTimePeriod;
+		unit?: TUnit;
+		tz?: string;
+		url?: string;
+		event_type?: string;
+	}): Promise<IEvent[]> {
+		return await this._apiClient.getEvents(this.website_id, options);
+	}
+
+	/**
+	 * Gets the total number of events by a filter
+	 * @param options.filter The field to filter by
+	 * @param options.value The value to match the field against
+	 * @param options.period The time period of events to return
+	 * @returns The total number of events matching the filter
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
+	 */
+	public async getEventsByName(
+		name: string,
+		options: { period?: TTimePeriod; unit?: TUnit; tz?: string; url?: string; event_type?: string }
+	): Promise<IEvent[]> {
+		return await this._apiClient.getEventsByName(this.website_id, name, options);
+	}
+
+	/**
+	 * Gets a type of metrics of the website from a specified time period
+	 * @param options.period The time period of events to return
+	 * @param options.type The type of metric to get. Defaults to url
+	 * @param options.url Filter metrics by URL
+	 * @param options.referrer Filter metrics by referrer
+	 * @param options.os Filter metrics by OS
+	 * @param options.browser Filter metrics by browser
+	 * @param options.device Filter metrics by device
+	 * @param options.country Filter metrics by country
+	 * @returns An array of metrics from the specified time period
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/metrics.js Relevant Umami source code}
+	 */
+	public async getMetrics(options?: {
+		period?: TTimePeriod;
+		type?: TMetricType;
+		url?: string;
+		referrer?: string;
+		os?: string;
+		browser?: string;
+		device?: string;
+		country?: string;
+	}): Promise<IMetric[]> {
+		return await this._apiClient.getMetrics(this.website_id, options);
+	}
+
+	/**
+	 * Gets the active visitors of a website
+	 * @returns
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/active.js Relevant Umami source code}
+	 */
+	public async getActiveVisitors(): Promise<IActiveVisitor[]> {
+		return await this._apiClient.getActiveVisitors(this.website_id);
+	}
+}
+
+class UserAccount {
+	private readonly _apiClient: UmamiAPIClient;
+	public readonly user_id: number;
+	public username: string;
+	public is_admin: boolean;
+	public readonly created_at: string;
+	public updated_at: string;
+
+	constructor(apiClient: UmamiAPIClient, data: IUserAccount) {
+		this._apiClient = apiClient;
+		Object.assign(this, data);
+	}
+
+	/**
+	 * Updates a user account
+	 * @param options.username New username (admin only)
+	 * @param options.password New password
+	 * @param options.is_admin New admin status (admin only)
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/index.js Relevant Umami source code}
+	 */
+	public async update(options: {
+		username: string;
+		password: string;
+		is_admin: boolean;
+	}): Promise<UserAccount> {
+		const data = await this._apiClient.updateAccount(this.user_id, options);
+		Object.assign(this, data);
+		return this;
+	}
+
+	/**
+	 * Updates a user account password
+	 * @param options.current_password Current password
+	 * @param options.new_password New password
+	 * @returns The user account
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/password.js Relevant Umami source code}
+	 */
+	public async changePassword(options: {
+		current_password: string;
+		new_password: string;
+	}): Promise<UserAccount> {
+		await this._apiClient.changePassword(this.user_id, options);
+		return this;
+	}
+
+	/**
+	 * Deletes the user account (admin only)
+	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/[id].js Relevant Umami source code}
+	 */
+	public async deleteAccount(): Promise<void> {
+		await this._apiClient.deleteAccount(this.user_id);
+	}
+}
+
 /**
  * Umami API Client
  */
 export default class UmamiAPIClient {
 	private readonly _axios: AxiosInstance;
 	private readonly _auth: Promise<AxiosResponse<IAuthData>>;
+	private readonly _returnClasses: boolean;
 	private _lastAuthCheck: number = Date.now();
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
@@ -153,13 +382,16 @@ export default class UmamiAPIClient {
 	 * @param server The Umami installation hostname (e.g. app.umami.is). The protocol, if present, will be removed.
 	 * @param username Username of the user you want to login
 	 * @param password Password of the user you want to login
+	 * @param returnClasses Return classes instead of plain-old JavaScript objects when getting websites or accounts.
 	 * @returns An authenticated class instance
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
-	constructor(server: string, username: string, password: string) {
+	constructor(server: string, username: string, password: string, returnClasses = false) {
 		if (!server) throw new Error("A server hostname is required");
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
 		if (!username || !password) throw new Error("A username and a password are required");
+
+		this._returnClasses = returnClasses;
 
 		this._axios = axios.create({
 			baseURL: `https://${server}/api`,
@@ -296,10 +528,10 @@ export default class UmamiAPIClient {
 		domain: string;
 		name: string;
 		enable_share_url?: boolean;
-	}): Promise<ITrackedWebsite> {
+	}): Promise<ITrackedWebsite | TrackedWebsite> {
 		try {
 			const { data } = await this._axios.post("/website", options);
-			return data;
+			return this._returnClasses ? new TrackedWebsite(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not create website", error, { options });
 		}
@@ -321,44 +553,44 @@ export default class UmamiAPIClient {
 			name: string;
 			enable_share_url?: boolean;
 		}
-	): Promise<ITrackedWebsite> {
+	): Promise<ITrackedWebsite | TrackedWebsite> {
 		try {
 			const { data } = await this._axios.post("/website", { website_id, ...options });
-			return data;
+			return this._returnClasses ? new TrackedWebsite(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not update website", error, { website_id, options });
 		}
 	}
 
 	/**
-	 * Get the first website that gets returned by Umami
+	 * Gets the first website that gets returned by Umami
 	 * @returns The first website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
-	public async getWebsite(): Promise<ITrackedWebsite>;
+	public async getWebsite(): Promise<ITrackedWebsite | TrackedWebsite>;
 	/**
-	 * Get the website by its ID (not UUID)
+	 * Gets a website by its ID (not UUID)
 	 * @param website_id The website's ID (not UUID)
 	 * @returns The website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
 	 */
-	public async getWebsite(website_id: number): Promise<ITrackedWebsite>;
-	public async getWebsite(website_id: number = null): Promise<ITrackedWebsite> {
+	public async getWebsite(website_id: number): Promise<ITrackedWebsite | TrackedWebsite>;
+	public async getWebsite(website_id: number = null): Promise<ITrackedWebsite | TrackedWebsite> {
 		try {
 			if (website_id == null) {
 				const websites = await this.getWebsites();
-				return websites[0];
+				return this._returnClasses ? new TrackedWebsite(this, websites[0]) : websites[0];
 			}
 
 			const { data } = await this._axios.get(`/website/${website_id}`);
-			return data;
+			return this._returnClasses ? new TrackedWebsite(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not get website", error, { website_id });
 		}
 	}
 
 	/**
-	 * Get a website by a property
+	 * Gets a website by a property
 	 * @param key The property to check
 	 * @param value The value to check the property against
 	 * @returns The website
@@ -373,11 +605,12 @@ export default class UmamiAPIClient {
 	public async getWebsiteBy(
 		key: keyof ITrackedWebsite,
 		value: string | number
-	): Promise<ITrackedWebsite> {
+	): Promise<ITrackedWebsite | TrackedWebsite> {
 		if (key == "share_id") {
 			try {
 				const { data } = await this._axios.get(`/share/${value}`);
-				return await this.getWebsite(data.websiteId);
+				const website = await this.getWebsite(data.websiteId);
+				return this._returnClasses ? new TrackedWebsite(this, website) : website;
 			} catch (error) {
 				throw _richError("Could not find website", error, { key, value });
 			}
@@ -385,7 +618,8 @@ export default class UmamiAPIClient {
 
 		if (key == "website_id") {
 			try {
-				return await this.getWebsite(value as number);
+				const data = await this.getWebsite(value as number);
+				return this._returnClasses ? new TrackedWebsite(this, data) : data;
 			} catch (error) {
 				throw _richError("Could not find website", error, { key, value });
 			}
@@ -396,7 +630,7 @@ export default class UmamiAPIClient {
 		if (!website) {
 			throw _richError("Could not find website", null, { key, value });
 		}
-		return website;
+		return this._returnClasses ? new TrackedWebsite(this, website) : website;
 	}
 
 	/**
@@ -404,17 +638,17 @@ export default class UmamiAPIClient {
 	 * @param website_id The website's ID (not UUID)
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/reset.js Relevant Umami source code}
 	 */
-	public async resetWebsite(website_id: number): Promise<ITrackedWebsite> {
+	public async resetWebsite(website_id: number): Promise<ITrackedWebsite | TrackedWebsite> {
 		try {
 			const { data } = await this._axios.post(`/website/${website_id}/reset`);
-			return data;
+			return this._returnClasses ? new TrackedWebsite(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not reset website", error, { website_id });
 		}
 	}
 
 	/**
-	 * Delete a website
+	 * Deletes a website
 	 * @param website_id The website's ID (not UUID)
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/index.js Relevant Umami source code}
 	 */
@@ -436,9 +670,12 @@ export default class UmamiAPIClient {
 	public async getWebsites(options?: {
 		include_all?: boolean;
 		user_id?: number;
-	}): Promise<ITrackedWebsite[]> {
+	}): Promise<ITrackedWebsite[] | TrackedWebsite[]> {
 		try {
 			const { data } = await this._axios.get("/websites", { params: options });
+			if (this._returnClasses) {
+				return (data as ITrackedWebsite[]).map((data) => new TrackedWebsite(this, data));
+			}
 			return data;
 		} catch (error) {
 			throw _richError("Could not get websites", error, { options });
@@ -646,10 +883,10 @@ export default class UmamiAPIClient {
 	public async createAccount(options: {
 		username: string;
 		password: string;
-	}): Promise<IUserAccount> {
+	}): Promise<IUserAccount | UserAccount> {
 		try {
 			const { data } = await this._axios.post("/account", options);
-			return data;
+			return this._returnClasses ? new UserAccount(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not create account", error, { options });
 		}
@@ -667,10 +904,10 @@ export default class UmamiAPIClient {
 	public async updateAccount(
 		user_id: number,
 		options: { username: string; password: string; is_admin: boolean }
-	): Promise<IUserAccount> {
+	): Promise<IUserAccount | UserAccount> {
 		try {
 			const { data } = await this._axios.post("/account", { user_id, ...options });
-			return data;
+			return this._returnClasses ? new UserAccount(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not update account", error, { user_id, options });
 		}
@@ -687,10 +924,10 @@ export default class UmamiAPIClient {
 	public async changePassword(
 		user_id: number,
 		options: { current_password: string; new_password: string }
-	): Promise<IUserAccount> {
+	): Promise<IUserAccount | UserAccount> {
 		try {
 			const { data } = await this._axios.post("/password", { user_id, ...options });
-			return data;
+			return this._returnClasses ? new UserAccount(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not update password", error, { user_id, options });
 		}
@@ -701,9 +938,12 @@ export default class UmamiAPIClient {
 	 * @returns An array of all the user accounts
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js Relevant Umami source code}
 	 */
-	public async getAccounts(): Promise<IUserAccount[]> {
+	public async getAccounts(): Promise<IUserAccount[] | UserAccount[]> {
 		try {
 			const { data } = await this._axios.get("/accounts");
+			if (this._returnClasses) {
+				return (data as IUserAccount[]).map((data) => new UserAccount(this, data));
+			}
 			return data;
 		} catch (error) {
 			throw _richError("Could not get accounts", error);
@@ -716,10 +956,10 @@ export default class UmamiAPIClient {
 	 * @returns The user account
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/account/[id].js Relevant Umami source code}
 	 */
-	public async getAccount(user_id: number): Promise<IUserAccount> {
+	public async getAccount(user_id: number): Promise<IUserAccount | UserAccount> {
 		try {
 			const { data } = await this._axios.get(`/account/${user_id}`);
-			return data;
+			return this._returnClasses ? new UserAccount(this, data) : data;
 		} catch (error) {
 			throw _richError("Could not get account", error, { user_id });
 		}
