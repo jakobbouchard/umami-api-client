@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+
+- `getEventsByName(...)`'s `name` parameter has been removed from its `options` object, because its uh a bit more logic isn't it?
+- [BREAKING] Now uses [`microbundle`](https://github.com/developit/microbundle) for bundling, which should help with compatibility.
+
 ## [0.3.1] - 2022-07-18
 
 ### Fixes
