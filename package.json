@@ -19,6 +19,7 @@
 	"unpkg": "./dist/index.umd.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
+		"prepublish": "npm run build",
 		"build": "microbundle",
 		"dev": "microbundle watch",
 		"test": "echo \"TODO: Add some tests\" && exit 1"
