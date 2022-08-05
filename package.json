@@ -1,6 +1,6 @@
 {
 	"name": "umami-api",
-	"version": "0.4.2",
+	"version": "0.5.0",
 	"description": "A simple API client for Umami analytics",
 	"author": "Jakob Bouchard <jakob@jakobbouchard.dev>",
 	"license": "MIT",
