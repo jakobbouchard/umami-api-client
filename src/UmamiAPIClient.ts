@@ -15,7 +15,13 @@ type TMetricType =
 	| "device"
 	| "country"
 	| "event"
-	| "language";
+	| "language"
+	| "utm_source"
+	| "utm_medium"
+	| "utm_campaign"
+	| "utm_content"
+	| "utm_term"
+	| "ref";
 
 interface IAuthData {
 	token: string;
@@ -386,7 +392,7 @@ export default class UmamiAPIClient<A extends boolean> {
 	 * @returns An authenticated class instance
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/auth/login.js Relevant Umami source code}
 	 */
-	constructor(server: string, username: string, password: string, returnClasses: A = false as A) {
+	constructor(server: string, username: string, password: string, returnClasses: A) {
 		if (!server) throw new Error("A server hostname is required");
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
 		if (!username || !password) throw new Error("A username and a password are required");
@@ -828,7 +834,14 @@ export default class UmamiAPIClient<A extends boolean> {
 		const { start_at, end_at } = convertPeriodToTime(options?.period ?? this._defaultPeriod);
 		const unit = options?.unit ?? this._defaultUnit;
 		const tz = options?.tz ?? this._defaultTZ;
-		const params = { start_at, end_at, unit, tz, url: options?.url, event_type: options?.event_type };
+		const params = {
+			start_at,
+			end_at,
+			unit,
+			tz,
+			url: options?.url,
+			event_type: options?.event_type,
+		};
 
 		try {
 			const { data } = await this._axios.get(`/website/${website_id}/events`, { params });
