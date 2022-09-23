@@ -19,6 +19,7 @@
 	"unpkg": "./dist/index.umd.js",
 	"types": "./dist/index.d.ts",
 	"scripts": {
+		"setup": "npm install -g microbundle",
 		"prepublish": "npm run build",
 		"build": "microbundle",
 		"dev": "microbundle watch",
