@@ -2,4 +2,7 @@
 dist/
 
 # This is temporary
-tests/
+coverage/
+
+# Intellij
+*.iml
