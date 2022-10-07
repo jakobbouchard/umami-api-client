@@ -6,7 +6,8 @@ coverage/
 tests/
 .editorconfig
 .eslintignore
-.eslintrc.cjs
+.eslintrc
+.hound.yml
 .prettierignore
 tsconfig.json
 vite.config.ts
