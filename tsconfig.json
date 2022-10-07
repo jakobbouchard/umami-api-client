@@ -14,7 +14,7 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"skipLibCheck": true,
-		"types": ["node", "jest"],
+		"types": ["node"],
 		"esModuleInterop": true
 	},
 	"include": ["src/**/*.ts"]

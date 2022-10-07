@@ -17,26 +17,26 @@ jobs:
         node-version: [16.x]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          cache-dependency-path: |
-            package-lock.json
+          cache: "pnpm"
 
       - name: Install dependencies
-        # - run: npm ci # need package.json.lock
         run: |
-          echo "install"
-          npm install
-          echo "show outdated (if any)"
-          npm outdated --depth=3 || echo "you must think about update your dependencies :)"
+          echo "Installing dependencies"
+          pnpm install --frozen-lockfile
+          echo "Show outdated (if any)"
+          pnpm outdated --depth=3 || echo "You must think about updating your dependencies :)"
 
-      - name: Npm audit
+      - name: NPM audit
         uses: oke-py/npm-audit-action@v1.7.1
         with:
           audit_level: moderate

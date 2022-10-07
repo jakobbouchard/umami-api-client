@@ -1,6 +1,7 @@
 .pnpm-store/
-**/node_modules
+coverage/
 dist/
+**/node_modules
 .DS_Store
 
 # Ignore files for PNPM, NPM and YARN

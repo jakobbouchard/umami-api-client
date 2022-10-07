@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 
@@ -63,8 +64,8 @@ describe("getters", () => {
 
 			const umami = new UmamiAPIClient(server, user, password, returnClasses);
 
-			const catchFn = jest.fn();
-			const thenFn = jest.fn();
+			const catchFn = vi.fn();
+			const thenFn = vi.fn();
 
 			// WHEN
 			await umami.getWebsites().then(thenFn).catch(catchFn);
@@ -81,8 +82,8 @@ describe("getters", () => {
 
 			const umami = new UmamiAPIClient(server, user, password, returnClasses);
 
-			const catchFn = jest.fn();
-			const thenFn = jest.fn();
+			const catchFn = vi.fn();
+			const thenFn = vi.fn();
 
 			// WHEN
 			await umami.getWebsite().then(thenFn).catch(catchFn);

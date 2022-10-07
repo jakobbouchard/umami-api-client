@@ -1,19 +1,14 @@
-# api-client continuous integration
 name: api-client-ci
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the prod branch
   pull_request:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  test:
+    name: pnpm test
     runs-on: ubuntu-latest
 
     strategy:
@@ -22,26 +17,23 @@ jobs:
         node-version: [16.x]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          cache-dependency-path: |
-            package-lock.json
+          cache: "pnpm"
 
       - name: Install dependencies
-        # - run: npm ci # need package.json.lock
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Run tests with coverage
-        run: npm run testCov
+      - name: Tests
+        run: pnpm test
 
-      - name: Npm audit
-        uses: oke-py/npm-audit-action@v1.7.1
-        with:
-          audit_level: moderate
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          dedupe_issues: true
+      - name: Coverage
+        run: pnpm coverage
