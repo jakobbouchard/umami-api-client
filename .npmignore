@@ -1,6 +1,5 @@
 .github/
 .husky/
-.pnpm-store/
 coverage/
 **/node_modules
 tests/

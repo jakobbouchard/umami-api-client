@@ -20,21 +20,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
       - name: Install Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "pnpm"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
 
       - name: Install dependencies
         run: |
           echo "Installing dependencies"
-          pnpm install --frozen-lockfile
+          npm ci
           echo "Show outdated (if any)"
-          pnpm outdated --depth=3 || echo "You must think about updating your dependencies :)"
+          npm outdated --depth=3 || echo "You must think about updating your dependencies :)"
 
       - name: NPM audit
         uses: oke-py/npm-audit-action@v1.7.1

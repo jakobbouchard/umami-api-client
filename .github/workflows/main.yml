@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: pnpm test
+    name: npm test
     runs-on: ubuntu-latest
 
     strategy:
@@ -20,20 +20,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
       - name: Install Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "pnpm"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Tests
-        run: pnpm test
+        run: npm test
 
       - name: Coverage
-        run: pnpm coverage
+        run: npm coverage

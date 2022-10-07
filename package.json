@@ -8,7 +8,6 @@
 		"type": "git",
 		"url": "https://github.com/jakobbouchard/umami-api-client.git"
 	},
-	"packageManager": "pnpm@7.13.2",
 	"type": "module",
 	"source": "./src/index.ts",
 	"exports": {
