@@ -358,7 +358,7 @@ export default class UmamiAPIClient<A extends boolean> {
 	private _lastAuthCheck: number = Date.now();
 	private _defaultPeriod: TTimePeriod = "24h";
 	private _defaultUnit: TUnit = "hour";
-	private _defaultTZ: string = "America/Toronto";
+	private _defaultTZ = "America/Toronto";
 	private _defaultMetricType: TMetricType = "url";
 	private _defaultUserAgent: string = DEFAULT_USER_AGENT;
 
@@ -399,11 +399,10 @@ export default class UmamiAPIClient<A extends boolean> {
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
 		if (!username || !password) throw new Error("A username and a password are required");
 
-
 		this._returnClasses = returnClasses;
 		this._axios = axios.create({
 			baseURL: `https://${server}/api`,
-			timeout: this.getClientTimeoutMs()
+			timeout: this.getClientTimeoutMs(),
 		});
 
 		this._axios.interceptors.request.use(this._verifyAuth.bind(this));
@@ -414,8 +413,10 @@ export default class UmamiAPIClient<A extends boolean> {
 	}
 
 	private getClientTimeoutMs() {
-		const timeout : number = parseInt(process.env.UMAMI_CLIENT_TIMEOUT_MS || DEFAULT_HTTP_CLIENT_TIMEOUT_MS.toString());
-		return (timeout < 100 || timeout > 60000) ? DEFAULT_HTTP_CLIENT_TIMEOUT_MS : timeout;
+		const timeout: number = parseInt(
+			process.env.UMAMI_CLIENT_TIMEOUT_MS || DEFAULT_HTTP_CLIENT_TIMEOUT_MS.toString()
+		);
+		return timeout < 100 || timeout > 60000 ? DEFAULT_HTTP_CLIENT_TIMEOUT_MS : timeout;
 	}
 
 	private async _verifyAuth(config: AxiosRequestConfig): Promise<AxiosRequestConfig> {
