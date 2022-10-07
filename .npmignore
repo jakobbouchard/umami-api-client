@@ -1,4 +1,12 @@
+.github/
+.husky/
+.pnpm-store/
 **/node_modules
 tests/**
 .editorconfig
+.eslintignore
+.eslintrc.cjs
+.prettierignore
+babel.config.cjs
+jest.config.ts
 tsconfig.json

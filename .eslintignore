@@ -1,6 +1,7 @@
+.pnpm-store/
+**/node_modules
+dist/
 .DS_Store
-node_modules
-/dist
 
 # Ignore files for PNPM, NPM and YARN
 pnpm-lock.yaml
