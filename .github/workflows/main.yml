@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: npm test
+    name: test and coverage
     runs-on: ubuntu-latest
 
     strategy:
@@ -31,8 +31,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Tests
-        run: npm test
-
-      - name: Coverage
+      - name: Test with coverage
         run: npm coverage
