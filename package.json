@@ -20,7 +20,7 @@
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"setup": "npm install -g microbundle",
-		"postinstall": "husky install",
+		"prepare": "husky install",
 		"prepublish": "npm run build",
 		"build": "microbundle",
 		"dev": "microbundle watch",
