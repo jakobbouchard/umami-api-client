@@ -5,19 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0]
+
+### Added
+
+- Hound CI for PRs.
+- Convert tests from jest to vitest.
+- ESLint, Prettier, Husky.
+- Auto-signing version tags.
+
+### Changed
+
+- Most functions now require the website UUID instead of its ID, per Umami's new API.
+- Changing an account's password now requires its UUID instead of its ID.
+- Most options now take `camelCase` params instead of `snake_case`.
+
+### Removed
+
+- `getEventsByName(...)` has been removed, since events now use names by default.
+
+## [0.5.2]
+
+### Added
+
+- Axios timeout, in case the server is slow.
+- Basic tests!
+
+### Fixed
+
+- Makes `returnClasses` required. It's better for typings, and it's clearer.
+
+## [0.5.1]
+
+### Fixed
+
+- Sometimes `_richError` didn't show the options.
+
 ## [0.5.0]
 
 ### Added
 
 - Support for UTM parameters in `getMetrics`.
 
-### Changes
+### Changed
 
 - Makes `returnClasses` required. It's better for typings, and it's clearer.
 
 ## [0.4.2]
 
-### Fixes
+### Fixed
 
 - Correctly type the return values with the introduction of `returnClasses` in 0.4.0.
 - Won't die when `options` is not provided.
@@ -42,14 +78,14 @@ website.update({
 });
 ```
 
-### Changes
+### Changed
 
 - [BREAKING] `getEventsByName(...)`'s `name` parameter has been removed from its `options` object, because its uh a bit more logic isn't it?
 - Now uses [`microbundle`](https://github.com/developit/microbundle) for bundling, which should help with compatibility.
 
 ## [0.3.1] - 2022-07-18
 
-### Fixes
+### Fixed
 
 - `changePassword(...)` pointed to the wrong endpoint.
 
