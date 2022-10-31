@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0]
 
+**WARNING**: This release contains a lot of breaking changes due to the fact that Umami's API moved from using IDs to UUIDs for most operations. As such, you should update your code to use UUIDs instead of IDs. Also, some parameters changed from `snake_case` to `camelCase`, due to changes in the Umami API. Sadly, it's not super consistent, so some items still require `snake_case`.
+
 ### Added
 
 - Hound CI for PRs.
