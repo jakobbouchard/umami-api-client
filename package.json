@@ -6,7 +6,10 @@
 	"contributors": [
 		"Brice Vandeputte <boly38@gmail.com>"
 	],
-	"funding": "https://www.buymeacoffee.com/jakobbouchard",
+	"funding": [
+		"https://www.buymeacoffee.com/jakobbouchard",
+		"https://ko-fi.com/jakobbouchard"
+	],
 	"license": "MIT",
 	"homepage": "https://github.com/jakobbouchard/umami-api-client#readme",
 	"repository": "github:jakobbouchard/umami-api-client",
