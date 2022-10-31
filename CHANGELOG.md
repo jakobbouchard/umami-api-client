@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Most functions now require the website UUID instead of its ID, per Umami's new API.
 - Changing an account's password now requires its UUID instead of its ID.
 - Most options now take `camelCase` params instead of `snake_case`.
+- Update axios.
 
 ### Removed
 
