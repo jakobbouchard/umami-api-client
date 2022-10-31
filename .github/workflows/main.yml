@@ -32,4 +32,4 @@ jobs:
         run: npm ci
 
       - name: Test with coverage
-        run: npm coverage
+        run: npm run coverage
