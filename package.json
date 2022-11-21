@@ -1,6 +1,6 @@
 {
 	"name": "umami-api",
-	"version": "0.6.1",
+	"version": "0.6.2",
 	"description": "A simple API client for Umami analytics",
 	"author": "Jakob Bouchard <jakob@jakobbouchard.dev> (https://jakobbouchard.dev/)",
 	"contributors": [
