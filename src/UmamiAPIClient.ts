@@ -114,7 +114,7 @@ interface IEventPayload extends IPageViewPayload {
 	event_data: string;
 }
 
-function _richError(message: string, cause?: any, options?: any): Error {
+function _richError(message: string, cause?: unknown, options?: unknown): Error {
 	if (!options) options = "None specified";
 	options = JSON.stringify(options);
 

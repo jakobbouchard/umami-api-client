@@ -41,7 +41,7 @@ const password = "012345678";
 const returnClasses = false;
 
 describe("getters", () => {
-	let mock: any;
+	let mock: MockAdapter;
 
 	beforeAll(() => {
 		mock = new MockAdapter(axios);
