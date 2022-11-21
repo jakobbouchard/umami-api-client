@@ -4,17 +4,15 @@
 	"extends": [
 		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
-		"prettier",
-		"plugin:editorconfig/all"
+		"plugin:editorconfig/noconflict",
+		"prettier"
 	],
 	"plugins": ["@typescript-eslint", "editorconfig"],
 	"parserOptions": {
-		"sourceType": "module",
-		"ecmaVersion": 2020
+		"sourceType": "module"
 	},
 	"env": {
-		"browser": true,
-		"es2017": true,
+		"es2020": true,
 		"node": true
 	}
 }
