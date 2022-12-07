@@ -5,7 +5,7 @@ import MockAdapter from "axios-mock-adapter";
 import UmamiAPIClient from "../src/index";
 
 const AUTH_RESPONSE = {
-	token: "thisIsTokenPlaceHolder",
+	token: "tokenPlaceHolder",
 	user: { user_id: 1, username: "admin", is_admin: true },
 };
 const GET_WEBSITES = [
@@ -15,6 +15,7 @@ const GET_WEBSITES = [
 		userId: 1,
 		name: "a__www.example.fr",
 		domain: "www.example.fr",
+		shareId: "fxTuJRd6",
 		createdAt: "2022-02-17T12:57:43.805Z",
 	},
 	{
@@ -23,6 +24,7 @@ const GET_WEBSITES = [
 		userId: 1,
 		name: "b__integration",
 		domain: "integration.example.fr",
+		shareId: "wLP1SE57",
 		createdAt: "2022-02-16T20:33:31.106Z",
 	},
 	{
@@ -31,6 +33,7 @@ const GET_WEBSITES = [
 		userId: 1,
 		name: "dev",
 		domain: "localhost",
+		shareId: "nlU4dVZT",
 		createdAt: "2022-02-16T12:44:44.015Z",
 	},
 ];
@@ -38,7 +41,6 @@ const GET_WEBSITES = [
 const server = "umami.example.fr";
 const user = "admin";
 const password = "012345678";
-const returnClasses = false;
 
 describe("getters", () => {
 	let mock: MockAdapter;
@@ -62,17 +64,9 @@ describe("getters", () => {
 			mockAuthRequest();
 			mockGetWebsites();
 
-			const umami = new UmamiAPIClient(server, user, password, returnClasses);
+			const umami = new UmamiAPIClient(server, user, password);
 
-			const catchFn = vi.fn();
-			const thenFn = vi.fn();
-
-			// WHEN
-			await umami.getWebsites().then(thenFn).catch(catchFn);
-
-			// THEN
-			expect(thenFn).toHaveBeenCalledWith(GET_WEBSITES);
-			expect(catchFn).not.toHaveBeenCalled();
+			await expect(umami.getWebsites()).resolves.toMatchObject(GET_WEBSITES);
 		});
 
 		it("getWebsite should return first website", async () => {
@@ -80,17 +74,9 @@ describe("getters", () => {
 			mockAuthRequest();
 			mockGetWebsites();
 
-			const umami = new UmamiAPIClient(server, user, password, returnClasses);
+			const umami = new UmamiAPIClient(server, user, password);
 
-			const catchFn = vi.fn();
-			const thenFn = vi.fn();
-
-			// WHEN
-			await umami.getWebsite().then(thenFn).catch(catchFn);
-
-			// THEN
-			expect(thenFn).toHaveBeenCalledWith(GET_WEBSITES[0]);
-			expect(catchFn).not.toHaveBeenCalled();
+			await expect(umami.getWebsite()).resolves.toMatchObject(GET_WEBSITES[0]);
 		});
 	});
 });
