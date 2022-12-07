@@ -3,10 +3,12 @@
 coverage/
 **/node_modules
 tests/
-.editorconfig
 .eslintignore
-.eslintrc
-.hound.yml
+.eslintrc.cjs
+.gitignore
 .prettierignore
+.prettierrc.cjs
+.yarnrc.yml
 tsconfig.json
 vite.config.ts
+yarn.lock

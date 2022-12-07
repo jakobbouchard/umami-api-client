@@ -1,9 +1,37 @@
-node_modules/
-dist/
-.DS_Store
+# Editors
+*.iml
+.vs/
+.nova/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
 
-# This is temporary
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Build and tests
+dist/
 coverage/
 
-# Intellij
-*.iml
+# Node
+**/node_modules/
+npm-debug.log
+
+# Yarn Integrity file
+.yarn-integrity
+
+# yarn v2+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
