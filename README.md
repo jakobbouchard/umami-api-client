@@ -1,6 +1,6 @@
 # Umami API Client
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jakobbouchard/umami-api-client/api-client-ci?label=tests&style=flat-square)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/jakobbouchard/umami-api-client/workflows/test.yml?branch=main&label=tests&style=flat-square)
 ![npm](https://img.shields.io/npm/v/umami-api?style=flat-square)
 ![npm bundle size](https://img.shields.io/bundlephobia/minzip/umami-api?style=flat-square)
 ![npm downloads](https://img.shields.io/npm/dt/umami-api?style=flat-square)
