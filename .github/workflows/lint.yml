@@ -8,43 +8,45 @@ on:
 
 jobs:
   prettier:
+    matrix:
+      node-version: [16]
+
     name: Prettier
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: 16
-
-      - name: Install yarn v3
-        run: corepack enable && corepack prepare yarn@stable --activate
-
-      - name: Install Node packages
-        uses: ./.github/actions/yarn-nm-install
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Run Prettier
-        run: yarn prettier --check .
+        run: pnpm prettier --check .
 
   eslint:
+    matrix:
+      node-version: [16]
+
     name: ESLint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: 16
-
-      - name: Install yarn v3
-        run: corepack enable && corepack prepare yarn@stable --activate
-
-      - name: Install Node packages
-        uses: ./.github/actions/yarn-nm-install
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Run ESLint
-        run: yarn eslint .
+        run: pnpm eslint .
