@@ -1,3 +1,3 @@
 "use strict";
-import UmamiAPIClient from "./UmamiAPIClient";
-export default UmamiAPIClient;
+import UmamiApiClient from "./UmamiApiClient";
+export default UmamiApiClient;

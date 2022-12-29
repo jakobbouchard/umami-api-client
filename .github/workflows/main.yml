@@ -1,35 +1,113 @@
-name: api-client-ci
+name: CI
 
 on:
   pull_request:
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  push:
+    branches: [$default-branch]
 
 jobs:
-  test:
-    name: test and coverage
+  packages:
+    name: Check npm install
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-        node-version: [16.x]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install Node.js ${{ matrix.node-version }}
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+  lint:
+    name: Run ESLint
+    runs-on: ubuntu-latest
+    needs: [packages]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run ESLint
+        run: pnpm eslint .
+  format:
+    name: Run Prettier
+    runs-on: ubuntu-latest
+    needs: [packages]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run Prettier
+        run: pnpm prettier --check .
+  typecheck:
+    name: Run TypeScript
+    runs-on: ubuntu-latest
+    needs: [packages]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run TypeScript
+        run: pnpm tsc --noEmit
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [packages]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm build
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: [packages]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          cache-dependency-path: |
-            package-lock.json
-
+          cache: "pnpm"
       - name: Install dependencies
-        run: npm ci
-
-      - name: Test with coverage
-        run: npm run coverage
+        run: pnpm install
+      - name: Run tests
+        run: pnpm test

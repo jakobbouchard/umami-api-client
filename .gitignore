@@ -1,9 +1,27 @@
-node_modules/
-dist/
-.DS_Store
-
-# This is temporary
-coverage/
-
-# Intellij
+# Editors
 *.iml
+.vs/
+.nova/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Build and tests
+dist/
+coverage/
+.eslintcache
+
+# Node
+**/node_modules/
+npm-debug.log
+

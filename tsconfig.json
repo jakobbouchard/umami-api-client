@@ -2,20 +2,24 @@
 	"compilerOptions": {
 		"declaration": true,
 		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"importsNotUsedAsValues": "error",
 		"lib": ["ESNext"],
 		"module": "ESNext",
 		"moduleResolution": "node",
 		"noEmitOnError": true,
 		"noImplicitAny": true,
 		"noImplicitOverride": true,
-		"noImplicitUseStrict": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"resolveJsonModule": true,
 		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
 		"target": "ESNext",
-		"types": ["node"]
+		"types": ["@types/node"]
 	},
 	"include": ["src/**/*.ts"]
 }
