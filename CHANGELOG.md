@@ -7,6 +7,7 @@
 - The API client now only returns classes. This means that `getWebsite()` will return a `Website` class, and `getWebsites()` will return an array of `Website` classes. This is a breaking change, but it's better for typings, and it's clearer.
 - Default parameters (user agent, time period, time unit, timezone and metric type) are now defined using environment variables. They cannot be set using functions anymore. This is a breaking change.
 - Errors are not caught anymore, so you can handle them yourself. This is a breaking change.
+- The package is now bundled using tsup, instead of microbundle. This might break compatibility with some environments, but it's smaller and faster.
 - Updated dependencies.
 
 ### Removed
