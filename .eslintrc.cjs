@@ -1,4 +1,5 @@
-const config = {
+/** @type {import('eslint').ESLint.ConfigData} */
+module.exports = {
 	root: true,
 	parser: "@typescript-eslint/parser",
 	extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
@@ -11,5 +12,3 @@ const config = {
 		node: true,
 	},
 };
-
-module.exports = config;

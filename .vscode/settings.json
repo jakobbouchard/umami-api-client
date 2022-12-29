@@ -1,3 +1,7 @@
 {
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"explorer.fileNesting.patterns": {
+		"package.json": ".eslint*, .lintstaged*, .npm*, .prettier*, pnpm-lock.yaml, tsconfig.json, vite.config.ts",
+		"readme*": "changelog*, license*"
+	}
 }

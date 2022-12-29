@@ -1,4 +1,4 @@
-const config = {
+module.exports = {
 	// Run TypeScript check on whole project
 	"*.ts": () => "tsc --noEmit",
 	// Run ESLint on TS files
@@ -6,5 +6,3 @@ const config = {
 	// Run Prettier everywhere
 	"*": "prettier --write --ignore-unknown",
 };
-
-module.exports = config;

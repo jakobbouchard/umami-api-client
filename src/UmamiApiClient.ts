@@ -27,8 +27,8 @@ const DEFAULT_TIME_UNIT = UMAMI_CLIENT_TIME_UNIT ?? "hour";
 const DEFAULT_TIMEZONE = UMAMI_CLIENT_TIMEZONE ?? "America/Toronto";
 const DEFAULT_METRIC_TYPE = UMAMI_CLIENT_METRIC_TYPE ?? "url";
 
-function isAxiosHeaders(headers: RawAxiosRequestHeaders | AxiosHeaders): headers is AxiosHeaders {
-	return !Object.hasOwn(headers, "common");
+function isAxiosHeaders(headers?: RawAxiosRequestHeaders | AxiosHeaders): headers is AxiosHeaders {
+	return !!headers && !Object.hasOwn(headers, "common");
 }
 
 class Website implements WebsiteData {
@@ -45,7 +45,13 @@ class Website implements WebsiteData {
 	constructor(apiClient: UmamiApiClient, axios: AxiosInstance, data: WebsiteData) {
 		this._apiClient = apiClient;
 		this._axios = axios;
-		Object.assign(this, data);
+		this.id = data.id;
+		this.websiteUuid = data.websiteUuid;
+		this.userId = data.userId;
+		this.name = data.name;
+		this.domain = data.domain;
+		this.shareId = data.shareId;
+		this.createdAt = data.createdAt;
 	}
 
 	/**
@@ -258,7 +264,12 @@ class UserAccount implements UserAccountData {
 
 	constructor(axios: AxiosInstance, data: UserAccountData) {
 		this._axios = axios;
-		Object.assign(this, data);
+		this.id = data.id;
+		this.username = data.username;
+		this.isAdmin = data.isAdmin;
+		this.createdAt = data.createdAt;
+		this.updatedAt = data.updatedAt;
+		this.accountUuid = data.accountUuid;
 	}
 
 	/**
@@ -459,8 +470,8 @@ export default class UmamiApiClient {
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/index.js Relevant Umami source code}
 	 */
 	public async getWebsite(websiteUuid: string): Promise<Website>;
-	public async getWebsite(websiteUuid: string = null) {
-		if (websiteUuid == null) {
+	public async getWebsite(websiteUuid?: string) {
+		if (websiteUuid === undefined) {
 			const websites = await this.getWebsites();
 			return new Website(this, this._axios, websites[0]);
 		}

@@ -1,8 +1,9 @@
 /** @type {import("prettier").Config} */
-const config = {
-	useTabs: true,
+module.exports = {
+	endOfLine: "lf",
 	printWidth: 100,
 	trailingComma: "all",
+	useTabs: true,
 	overrides: [
 		{
 			files: "*.yml",
@@ -10,5 +11,3 @@ const config = {
 		},
 	],
 };
-
-module.exports = config;
