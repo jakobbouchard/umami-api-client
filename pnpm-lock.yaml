@@ -18,6 +18,7 @@ specifiers:
   prettier: ^2.8.1
   typescript: ^4.9.4
   vitest: ^0.26.2
+  vitest-github-actions-reporter: ^0.9.0
 
 dependencies:
   axios: 1.2.2
@@ -39,8 +40,28 @@ devDependencies:
   prettier: 2.8.1
   typescript: 4.9.4
   vitest: 0.26.2
+  vitest-github-actions-reporter: 0.9.0_vitest@0.26.2
 
 packages:
+  /@actions/core/1.10.0:
+    resolution:
+      {
+        integrity: sha512-2aZDDa3zrrZbP5ZYg159sNoLRb61nQ7awl5pSvIq5Qpj81vwDzdMRKzkWJGJuwVvWpvZKx7vspJALyvaaIQyug==,
+      }
+    dependencies:
+      "@actions/http-client": 2.0.1
+      uuid: 8.3.2
+    dev: true
+
+  /@actions/http-client/2.0.1:
+    resolution:
+      {
+        integrity: sha512-PIXiMVtz6VvyaRsGY268qvj57hXQEpsYogYOu2nrQhlf+XCGmZstmuZBbAybUl1nQGnvS1k1eEsQ69ZoD7xlSw==,
+      }
+    dependencies:
+      tunnel: 0.0.6
+    dev: true
+
   /@ampproject/remapping/2.2.0:
     resolution:
       {
@@ -8116,6 +8137,14 @@ packages:
       yargs: 17.6.2
     dev: true
 
+  /tunnel/0.0.6:
+    resolution:
+      {
+        integrity: sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==,
+      }
+    engines: { node: ">=0.6.11 <=0.7.0 || >=0.7.3" }
+    dev: true
+
   /type-check/0.4.0:
     resolution:
       {
@@ -8283,6 +8312,14 @@ packages:
       }
     dev: true
 
+  /uuid/8.3.2:
+    resolution:
+      {
+        integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==,
+      }
+    hasBin: true
+    dev: true
+
   /v8-to-istanbul/9.0.1:
     resolution:
       {
@@ -8364,6 +8401,19 @@ packages:
       rollup: 3.9.0
     optionalDependencies:
       fsevents: 2.3.2
+    dev: true
+
+  /vitest-github-actions-reporter/0.9.0_vitest@0.26.2:
+    resolution:
+      {
+        integrity: sha512-tCC9exD0HLH4oTdZBuAMapwkVU9RAcU2GpbtO4a5nqYG4Ty2LW61z90srbWqk3rZHL8IxGo2WfL8r7U+EeeYug==,
+      }
+    engines: { node: ">=14.16.0" }
+    peerDependencies:
+      vitest: ">=0.16.0"
+    dependencies:
+      "@actions/core": 1.10.0
+      vitest: 0.26.2
     dev: true
 
   /vitest/0.26.2:

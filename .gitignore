@@ -19,6 +19,7 @@
 # Build and tests
 dist/
 coverage/
+.eslintcache
 
 # Node
 **/node_modules/

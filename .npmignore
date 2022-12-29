@@ -3,6 +3,7 @@
 coverage/
 **/node_modules
 tests/
+.eslintcache
 .eslintignore
 .eslintrc.cjs
 .gitignore
