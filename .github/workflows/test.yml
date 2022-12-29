@@ -8,8 +8,9 @@ on:
 
 jobs:
   coverage:
-    matrix:
-      node-version: [16]
+    strategy:
+      matrix:
+        node-version: [16]
 
     name: Coverage
     runs-on: ubuntu-latest

@@ -8,8 +8,9 @@ on:
 
 jobs:
   prettier:
-    matrix:
-      node-version: [16]
+    strategy:
+      matrix:
+        node-version: [16]
 
     name: Prettier
     runs-on: ubuntu-latest
@@ -30,8 +31,9 @@ jobs:
         run: pnpm prettier --check .
 
   eslint:
-    matrix:
-      node-version: [16]
+    strategy:
+      matrix:
+        node-version: [16]
 
     name: ESLint
     runs-on: ubuntu-latest
