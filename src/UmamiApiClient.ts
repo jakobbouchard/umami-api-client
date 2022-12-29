@@ -1,4 +1,10 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from "axios";
+import axios, {
+	type AxiosHeaders,
+	type RawAxiosRequestHeaders,
+	type AxiosInstance,
+	type AxiosRequestConfig,
+	type AxiosResponse,
+} from "axios";
 import { convertPeriodToTime } from "./utils/time-periods";
 
 const {
@@ -20,6 +26,10 @@ const DEFAULT_TIME_PERIOD = UMAMI_CLIENT_TIME_PERIOD ?? "24h";
 const DEFAULT_TIME_UNIT = UMAMI_CLIENT_TIME_UNIT ?? "hour";
 const DEFAULT_TIMEZONE = UMAMI_CLIENT_TIMEZONE ?? "America/Toronto";
 const DEFAULT_METRIC_TYPE = UMAMI_CLIENT_METRIC_TYPE ?? "url";
+
+function isAxiosHeaders(headers: RawAxiosRequestHeaders | AxiosHeaders): headers is AxiosHeaders {
+	return !Object.hasOwn(headers, "common");
+}
 
 class Website implements WebsiteData {
 	private readonly _apiClient: UmamiApiClient;
@@ -321,7 +331,8 @@ export default class UmamiApiClient {
 
 		const auth = await this._auth;
 
-		config.headers = { ...config.headers, Authorization: `Bearer ${auth.data.token}` };
+		isAxiosHeaders(config.headers) &&
+			config.headers.set("Authorization", `Bearer ${auth.data.token}`);
 
 		if (config.url == "/auth/verify") return config;
 
