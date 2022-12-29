@@ -5,7 +5,7 @@
 ![npm bundle size](https://img.shields.io/bundlephobia/minzip/umami-api?style=flat-square)
 ![npm downloads](https://img.shields.io/npm/dt/umami-api?style=flat-square)
 
-🍙 Simple, tiny (<12.5kB gzipped), API client for Umami analytics.
+🍙 Simple, tiny API client for Umami analytics.
 
 ## Installation
 
