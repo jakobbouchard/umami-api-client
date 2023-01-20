@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+### Patch Changes
+
+- [`db93efa`](https://github.com/jakobbouchard/umami-api-client/commit/db93efacbdd8aa65eb684e0b4d6b985d27e6e253) Thanks [@jakobbouchard](https://github.com/jakobbouchard)! - Update dependencies
+
+- Update dependencies
+
 ## 0.7.0
 
 ### Changed
