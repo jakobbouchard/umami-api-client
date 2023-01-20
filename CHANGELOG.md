@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+### Patch Changes
+
+- [`95d0783`](https://github.com/jakobbouchard/umami-api-client/commit/95d07835a8d4adcfbc349ac17680e9d5001eff78) Thanks [@jakobbouchard](https://github.com/jakobbouchard)! - Bump vitest
+
 ## 0.7.1
 
 ### Patch Changes
