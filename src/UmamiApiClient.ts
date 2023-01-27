@@ -1,9 +1,7 @@
 import axios, {
-	type AxiosHeaders,
-	type RawAxiosRequestHeaders,
 	type AxiosInstance,
-	type AxiosRequestConfig,
 	type AxiosResponse,
+	type InternalAxiosRequestConfig,
 } from "axios";
 import { Website, type WebsiteData } from "./classes/website";
 import { UserAccount, type UserAccountData } from "./classes/user-account";
@@ -43,10 +41,6 @@ interface EventPayload {
 
 type CollectPayload = PageViewPayload | EventPayload;
 
-function isAxiosHeaders(headers?: RawAxiosRequestHeaders | AxiosHeaders): headers is AxiosHeaders {
-	return !!headers && !Object.hasOwn(headers, "common");
-}
-
 export default class UmamiApiClient {
 	private readonly _axios: AxiosInstance;
 	private readonly _auth: Promise<AxiosResponse<AuthData>>;
@@ -78,13 +72,12 @@ export default class UmamiApiClient {
 		this._auth = this._axios.post("/auth/login", { username, password });
 	}
 
-	private async _verifyAuth(config: AxiosRequestConfig) {
+	private async _verifyAuth(config: InternalAxiosRequestConfig) {
 		if (config.url == "/auth/login" || config.url == "/collect") return config;
 
 		const auth = await this._auth;
 
-		isAxiosHeaders(config.headers) &&
-			config.headers.set("Authorization", `Bearer ${auth.data.token}`);
+		config.headers["Authorization"] = `Bearer ${auth.data.token}`;
 
 		if (config.url == "/auth/verify") return config;
 
