@@ -88,13 +88,13 @@ interface ActiveVisitor {
 }
 
 const HOUR_PERIODS = ["1h", "1hour", "60min", "60minutes"] as const;
-type HourPeriod = typeof HOUR_PERIODS[number];
+type HourPeriod = (typeof HOUR_PERIODS)[number];
 const DAY_PERIODS = ["1d", "1day", "24h", "24hours"] as const;
-type DayPeriod = typeof DAY_PERIODS[number];
+type DayPeriod = (typeof DAY_PERIODS)[number];
 const WEEK_PERIODS = ["7d", "7days", "1w", "1week"] as const;
-type WeekPeriod = typeof WEEK_PERIODS[number];
+type WeekPeriod = (typeof WEEK_PERIODS)[number];
 const MONTH_PERIODS = ["31d", "31days", "1m", "1month"] as const;
-type MonthPeriod = typeof MONTH_PERIODS[number];
+type MonthPeriod = (typeof MONTH_PERIODS)[number];
 
 type TimePeriod = HourPeriod | DayPeriod | WeekPeriod | MonthPeriod;
 
