@@ -1,5 +1,10 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:js-lib", ":preserveSemverRanges", "schedule:earlyMondays"],
+	"extends": [
+		"config:js-lib",
+		":preserveSemverRanges",
+		"group:allNonMajor",
+		"schedule:earlyMondays"
+	],
 	"timezone": "America/Montreal"
 }

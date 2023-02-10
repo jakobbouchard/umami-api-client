@@ -28,7 +28,7 @@
 		"client"
 	],
 	"type": "module",
-	"packageManager": "pnpm@7.26.3",
+	"packageManager": "pnpm@7.27.0",
 	"engines": {
 		"node": ">=16.0.0"
 	},
@@ -60,22 +60,22 @@
 		"axios": "^1.2.5"
 	},
 	"devDependencies": {
-		"@changesets/changelog-github": "0.4.8",
-		"@changesets/cli": "2.26.0",
-		"@types/node": "18.11.19",
-		"@typescript-eslint/eslint-plugin": "5.50.0",
-		"@typescript-eslint/parser": "5.50.0",
-		"@vitest/coverage-c8": "0.28.4",
-		"axios-mock-adapter": "1.21.2",
-		"eslint": "8.33.0",
-		"eslint-config-prettier": "8.6.0",
-		"husky": "8.0.3",
-		"lint-staged": "13.1.0",
-		"prettier": "2.8.3",
-		"tsup": "6.5.0",
-		"typescript": "4.9.5",
-		"vitest": "0.28.4",
-		"vitest-github-actions-reporter": "0.9.0"
+		"@changesets/changelog-github": "^0.4.8",
+		"@changesets/cli": "^2.26.0",
+		"@types/node": "^18.13.0",
+		"@typescript-eslint/eslint-plugin": "^5.10.0",
+		"@typescript-eslint/parser": "^5.51.0",
+		"@vitest/coverage-c8": "^0.28.4",
+		"axios-mock-adapter": "^1.21.2",
+		"eslint": "^8.33.0",
+		"eslint-config-prettier": "^8.6.0",
+		"husky": "^8.0.3",
+		"lint-staged": "^13.1.1",
+		"prettier": "^2.8.4",
+		"tsup": "^6.6.0",
+		"typescript": "^4.9.5",
+		"vitest": "^0.28.4",
+		"vitest-github-actions-reporter": "^0.9.0"
 	},
 	"mangle": {
 		"regex": "^_"
