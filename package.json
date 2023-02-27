@@ -28,7 +28,7 @@
 		"client"
 	],
 	"type": "module",
-	"packageManager": "pnpm@7.27.0",
+	"packageManager": "pnpm@7.28.0",
 	"engines": {
 		"node": ">=16.0.0"
 	},
@@ -65,7 +65,7 @@
 		"@types/node": "^18.13.0",
 		"@typescript-eslint/eslint-plugin": "^5.10.0",
 		"@typescript-eslint/parser": "^5.51.0",
-		"@vitest/coverage-c8": "^0.28.4",
+		"@vitest/coverage-c8": "^0.29.0",
 		"axios-mock-adapter": "^1.21.2",
 		"eslint": "^8.33.0",
 		"eslint-config-prettier": "^8.6.0",
@@ -74,8 +74,8 @@
 		"prettier": "^2.8.4",
 		"tsup": "^6.6.0",
 		"typescript": "^4.9.5",
-		"vitest": "^0.28.4",
-		"vitest-github-actions-reporter": "^0.9.0"
+		"vitest": "^0.29.0",
+		"vitest-github-actions-reporter": "^0.10.0"
 	},
 	"mangle": {
 		"regex": "^_"
