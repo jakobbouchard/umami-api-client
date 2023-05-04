@@ -65,7 +65,7 @@
 		"@types/node": "^18.15.3",
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
-		"@vitest/coverage-c8": "^0.29.2",
+		"@vitest/coverage-c8": "^0.31.0",
 		"axios-mock-adapter": "^1.21.2",
 		"eslint": "^8.36.0",
 		"eslint-config-prettier": "^8.7.0",
@@ -74,7 +74,7 @@
 		"prettier": "^2.8.4",
 		"tsup": "^6.6.3",
 		"typescript": "^5.0.0",
-		"vitest": "^0.29.2",
+		"vitest": "^0.31.0",
 		"vitest-github-actions-reporter": "^0.10.0"
 	},
 	"mangle": {
