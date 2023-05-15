@@ -28,7 +28,7 @@
 		"client"
 	],
 	"type": "module",
-	"packageManager": "pnpm@8.4.0",
+	"packageManager": "pnpm@8.5.1",
 	"engines": {
 		"node": ">=16.0.0"
 	},
