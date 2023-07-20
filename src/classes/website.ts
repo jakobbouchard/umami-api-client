@@ -4,7 +4,7 @@ import {
 	DEFAULT_TIME_UNIT,
 	DEFAULT_TIMEZONE,
 	DEFAULT_METRIC_TYPE,
-} from "../constants";
+} from "../lib/constants";
 
 type TimeUnit = "year" | "month" | "day" | "hour";
 

@@ -8,7 +8,7 @@ import { UserAccount, type UserAccountData } from "./classes/user-account";
 import {
 	DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
 	DEFAULT_USER_AGENT,
-} from "./constants";
+} from "./lib/constants";
 
 interface AuthData {
 	token: string;
