@@ -10,12 +10,10 @@ import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_USER_AGENT } from "./defaults";
 interface AuthData {
 	token: string;
 	user: {
-		userId: number;
+		id: string;
 		username: string;
-		isAdmin: boolean;
-		accountUuid: string;
-		iat?: number;
-		shareToken?: string;
+		role: string;
+		createdAt: number;
 	};
 }
 
@@ -42,12 +40,12 @@ interface EventPayload {
 type CollectPayload = PageViewPayload | EventPayload;
 
 export default class UmamiApiClient {
-	private readonly _axios: AxiosInstance;
-	private readonly _auth: Promise<AxiosResponse<AuthData>>;
-	private _lastAuthCheck: number = Date.now();
+	readonly #axios: AxiosInstance;
+	readonly #auth: Promise<AxiosResponse<AuthData>>;
+	#lastAuthCheck: number = Date.now();
 
-	public async getCurrentUser() {
-		return (await this._auth).data.user;
+	async getCurrentUser() {
+		return (await this.#auth).data.user;
 	}
 
 	/**
@@ -60,32 +58,33 @@ export default class UmamiApiClient {
 	constructor(server: string, username: string, password: string) {
 		if (!server) throw new Error("A server hostname is required");
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
-		if (!username || !password) throw new Error("A username and a password are required");
+		if (!username || !password)
+			throw new Error("A username and a password are required");
 
-		this._axios = axios.create({
-			baseURL: `https://${server}/api`,
+		this.#axios = axios.create({
+			baseURL: `http://${server}/api`,
 			timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
 		});
 
-		this._axios.interceptors.request.use(this._verifyAuth.bind(this));
+		this.#axios.interceptors.request.use(this.#verifyAuth.bind(this));
 
-		this._auth = this._axios.post("/auth/login", { username, password });
+		this.#auth = this.#axios.post("/auth/login", { username, password });
 	}
 
-	private async _verifyAuth(config: InternalAxiosRequestConfig) {
+	async #verifyAuth(config: InternalAxiosRequestConfig) {
 		if (config.url == "/auth/login" || config.url == "/collect") return config;
 
-		const auth = await this._auth;
+		const auth = await this.#auth;
 
 		config.headers["Authorization"] = `Bearer ${auth.data.token}`;
 
 		if (config.url == "/auth/verify") return config;
 
-		if (this._lastAuthCheck + 60 * 60 * 1000 < Date.now()) {
-			this._lastAuthCheck = Date.now();
+		if (this.#lastAuthCheck + 60 * 60 * 1000 < Date.now()) {
+			this.#lastAuthCheck = Date.now();
 
 			try {
-				await this._axios.get("/auth/verify");
+				await this.#axios.get("/auth/verify");
 			} catch (error) {
 				console.error({ axiosConfig: config });
 				throw error;
@@ -102,7 +101,7 @@ export default class UmamiApiClient {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L75 Relevant Umami source code}
 	 */
-	public async collect(
+	async collect(
 		type: "pageview",
 		payload: PageViewPayload,
 		userAgent?: string,
@@ -114,15 +113,22 @@ export default class UmamiApiClient {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L77 Relevant Umami source code}
 	 */
-	public async collect(type: "event", payload: EventPayload, userAgent?: string): Promise<string>;
-	public async collect(
+	async collect(
+		type: "event",
+		payload: EventPayload,
+		userAgent?: string,
+	): Promise<string>;
+	async collect(
 		type: "pageview" | "event",
 		payload: CollectPayload,
 		userAgent: string = DEFAULT_USER_AGENT,
 	) {
-		if (!userAgent) throw new Error("A user agent is required. See https://umami.is/docs/api");
+		if (!userAgent)
+			throw new Error(
+				"A user agent is required. See https://umami.is/docs/api",
+			);
 
-		const { data } = await this._axios.post<string>(
+		const { data } = await this.#axios.post<string>(
 			"/collect",
 			{ type, payload },
 			{ headers: { "User-Agent": userAgent } },
@@ -138,7 +144,7 @@ export default class UmamiApiClient {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L75 Relevant Umami source code}
 	 */
-	public static async collect(
+	static async collect(
 		server: string,
 		type: "pageview",
 		payload: PageViewPayload,
@@ -152,13 +158,13 @@ export default class UmamiApiClient {
 	 * @param userAgent Value of the User-Agent header. Necessary for platform detection. Defaults to Firefox on Mac OS on a laptop
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/collect.js#L77 Relevant Umami source code}
 	 */
-	public static async collect(
+	static async collect(
 		server: string,
 		type: "event",
 		payload: EventPayload,
 		userAgent?: string,
 	): Promise<string>;
-	public static async collect(
+	static async collect(
 		server: string,
 		type: "pageview" | "event",
 		payload: CollectPayload,
@@ -167,7 +173,10 @@ export default class UmamiApiClient {
 		if (!server) throw new Error("A server is required.");
 		server = server.replace(/https?:\/\//, "").replace(/\/$/, "");
 
-		if (!userAgent) throw new Error("A user agent is required. See https://umami.is/docs/api");
+		if (!userAgent)
+			throw new Error(
+				"A user agent is required. See https://umami.is/docs/api",
+			);
 
 		const { data } = await axios.post<string>(
 			`https://${server}/api/collect`,
@@ -184,11 +193,11 @@ export default class UmamiApiClient {
 	 * @returns An array of tracked websites
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js#L20-L31 Relevant Umami source code}
 	 */
-	public async getWebsites(options?: { include_all?: boolean; user_id?: number }) {
-		const { data } = await this._axios.get<WebsiteData[]>("/websites", {
+	async getWebsites(options?: { include_all?: boolean; user_id?: number }) {
+		const { data } = await this.#axios.get<WebsiteData[]>("/websites", {
 			params: options,
 		});
-		return data.map((data) => new Website(this, this._axios, data));
+		return data.map((data) => new Website(this.#axios, data));
 	}
 
 	/**
@@ -196,22 +205,22 @@ export default class UmamiApiClient {
 	 * @returns The first website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js Relevant Umami source code}
 	 */
-	public async getWebsite(): Promise<Website>;
+	async getWebsite(): Promise<Website>;
 	/**
-	 * Gets a website by its UUID (not ID)
-	 * @param websiteUuid The website's UUID (not ID)
+	 * Gets a website by its ID
+	 * @param websiteUuid The website's ID
 	 * @returns The website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/index.js Relevant Umami source code}
 	 */
-	public async getWebsite(websiteUuid: string): Promise<Website>;
-	public async getWebsite(websiteUuid?: string) {
-		if (websiteUuid === undefined) {
+	async getWebsite(id: string): Promise<Website>;
+	async getWebsite(id?: string) {
+		if (id === undefined) {
 			const websites = await this.getWebsites();
-			return new Website(this, this._axios, websites[0]);
+			return new Website(this.#axios, websites[0]);
 		}
 
-		const { data } = await this._axios.get<WebsiteData>(`/websites/${websiteUuid}`);
-		return new Website(this, this._axios, data);
+		const { data } = await this.#axios.get<WebsiteData>(`/websites/${id}`);
+		return new Website(this.#axios, data);
 	}
 
 	/**
@@ -227,13 +236,15 @@ export default class UmamiApiClient {
 	 * const website = await instance.getWebsiteBy("domain", "example.com");
 	 * ```
 	 */
-	public async getWebsiteBy(key: keyof Website, value: string | number) {
+	async getWebsiteBy(key: keyof Website, value: string | number) {
 		if (key == "shareId") {
-			const { data } = await this._axios.get<{ id: string; token: string }>(`/share/${value}`);
+			const { data } = await this.#axios.get<{ id: string; token: string }>(
+				`/share/${value}`,
+			);
 			return await this.getWebsite(data.id);
 		}
 
-		if (key == "websiteUuid") {
+		if (key == "id") {
 			return await this.getWebsite(value as string);
 		}
 
@@ -249,26 +260,17 @@ export default class UmamiApiClient {
 	 * Creates a new website and returns its information.
 	 * @param options.domain The domain name of the website (e.g. umami.is)
 	 * @param options.name The name of the website (usually the same as the domain)
-	 * @param options.owner The website's owner's ID (by default, the logged-in's user's)
-	 * @param options.enableShareUrl Whether or not to enable public sharing.
+	 * @param options.shareId A unique string to enable a share url. Set `null` to unshare.
 	 * @returns The new website's information
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/index.js#L33-L47 Relevant Umami source code}
 	 */
-	public async createWebsite(options: {
+	async createWebsite(options: {
 		domain: string;
 		name: string;
-		owner?: number;
-		enableShareUrl?: boolean;
+		sharedId?: string;
 	}) {
-		if (!options.owner) {
-			const currentUser = await this.getCurrentUser();
-			options = {
-				...options,
-				owner: currentUser.userId,
-			};
-		}
-		const { data } = await this._axios.post<WebsiteData>("/websites", options);
-		return new Website(this, this._axios, data);
+		const { data } = await this.#axios.post<WebsiteData>("/websites", options);
+		return new Website(this.#axios, data);
 	}
 
 	/**
@@ -276,9 +278,9 @@ export default class UmamiApiClient {
 	 * @returns An array of all the user accounts
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js#L15-L19 Relevant Umami source code}
 	 */
-	public async getAccounts() {
-		const { data } = await this._axios.get<UserAccountData[]>("/accounts");
-		return data.map((data) => new UserAccount(this._axios, data));
+	async getAccounts() {
+		const { data } = await this.#axios.get<UserAccountData[]>("/accounts");
+		return data.map((data) => new UserAccount(this.#axios, data));
 	}
 
 	/**
@@ -287,9 +289,11 @@ export default class UmamiApiClient {
 	 * @returns The user account
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/[id]/index.js#L11-L19 Relevant Umami source code}
 	 */
-	public async getAccount(userId: number) {
-		const { data } = await this._axios.get<UserAccountData>(`/accounts/${userId}`);
-		return new UserAccount(this._axios, data);
+	async getAccount(userId: number) {
+		const { data } = await this.#axios.get<UserAccountData>(
+			`/accounts/${userId}`,
+		);
+		return new UserAccount(this.#axios, data);
 	}
 
 	/**
@@ -299,8 +303,11 @@ export default class UmamiApiClient {
 	 * @returns The user account
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/index.js#L21-L37 Relevant Umami source code}
 	 */
-	public async createAccount(options: { username: string; password: string }) {
-		const { data } = await this._axios.post<UserAccountData>("/accounts", options);
-		return new UserAccount(this._axios, data);
+	async createAccount(options: { username: string; password: string }) {
+		const { data } = await this.#axios.post<UserAccountData>(
+			"/accounts",
+			options,
+		);
+		return new UserAccount(this.#axios, data);
 	}
 }

@@ -10,16 +10,16 @@ export interface UserAccountData {
 }
 
 export class UserAccount implements UserAccountData {
-	private readonly _axios: AxiosInstance;
-	public readonly id: number;
-	public username: string;
-	public isAdmin: boolean;
-	public readonly createdAt: string;
-	public updatedAt: string;
-	public accountUuid: string;
+	readonly #axios: AxiosInstance;
+	readonly id: number;
+	username: string;
+	isAdmin: boolean;
+	readonly createdAt: string;
+	updatedAt: string;
+	accountUuid: string;
 
 	constructor(axios: AxiosInstance, data: UserAccountData) {
-		this._axios = axios;
+		this.#axios = axios;
 		this.id = data.id;
 		this.username = data.username;
 		this.isAdmin = data.isAdmin;
@@ -35,8 +35,8 @@ export class UserAccount implements UserAccountData {
 	 * @returns The user account
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/[id]/index.js#L21-L53 Relevant Umami source code}
 	 */
-	public async update(options: { username: string; password: string }) {
-		const { data } = await this._axios.post(`/accounts/${this.id}`, options);
+	async update(options: { username: string; password: string }) {
+		const { data } = await this.#axios.post(`/accounts/${this.id}`, options);
 		Object.assign(this, data);
 		return this;
 	}
@@ -48,8 +48,11 @@ export class UserAccount implements UserAccountData {
 	 * @returns The user account
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/[id]/password.js Relevant Umami source code}
 	 */
-	public async changePassword(options: { current_password: string; new_password: string }) {
-		await this._axios.post(`/accounts/${this.accountUuid}/password`, options);
+	async changePassword(options: {
+		current_password: string;
+		new_password: string;
+	}) {
+		await this.#axios.post(`/accounts/${this.accountUuid}/password`, options);
 		return this;
 	}
 
@@ -57,7 +60,7 @@ export class UserAccount implements UserAccountData {
 	 * Deletes the user account (admin only)
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/accounts/[id]/index.js#L55-L63 Relevant Umami source code}
 	 */
-	public async delete() {
-		await this._axios.delete(`/accounts/${this.id}`);
+	async delete() {
+		await this.#axios.delete(`/accounts/${this.id}`);
 	}
 }

@@ -1,5 +1,4 @@
 import type { AxiosInstance } from "axios";
-import type UmamiApiClient from "../UmamiApiClient";
 import {
 	DEFAULT_TIME_PERIOD,
 	DEFAULT_TIME_UNIT,
@@ -12,36 +11,23 @@ type TimeUnit = "year" | "month" | "day" | "hour";
 type MetricType =
 	| "url"
 	| "referrer"
+	| "title"
+	| "query"
+	| "event"
 	| "browser"
 	| "os"
 	| "device"
-	| "country"
-	| "event"
+	| "screen"
 	| "language"
-	| "utm_source"
-	| "utm_medium"
-	| "utm_campaign"
-	| "utm_content"
-	| "utm_term"
-	| "ref";
+	| "country"
+	| "region"
+	| "city";
 
 interface Stats {
-	pageviews: {
-		value: number;
-		change: number;
-	};
-	uniques: {
-		value: number;
-		change: number;
-	};
-	bounces: {
-		value: number;
-		change: number;
-	};
-	totaltime: {
-		value: number;
-		change: number;
-	};
+	pageviews: { value: number; change: number };
+	uniques: { value: number; change: number };
+	bounces: { value: number; change: number };
+	totaltime: { value: number; change: number };
 }
 
 interface PageViews {
@@ -117,68 +103,67 @@ export const convertPeriodToTime = (period: TimePeriod = "24h") => {
 		]}`;
 	}
 	return {
-		start_at: Date.now() - delta,
-		end_at: Date.now(),
+		startAt: Date.now() - delta,
+		endAt: Date.now(),
 	};
 };
 
 export interface WebsiteData {
-	id: number;
-	websiteUuid: string;
-	userId: number;
+	id: string;
 	name: string;
 	domain: string;
 	shareId: string | null;
+	resetAt: string | null;
+	userId: string;
 	createdAt: string;
+	updatedAt: string;
+	deletedAt: string | null;
 }
 
 export class Website implements WebsiteData {
-	private readonly _apiClient: UmamiApiClient;
-	private readonly _axios: AxiosInstance;
-	public readonly id: number;
-	public readonly websiteUuid: string;
-	public userId: number;
-	public name: string;
-	public domain: string;
-	public shareId: string | null;
-	public createdAt: string;
+	readonly #axios: AxiosInstance;
+	readonly id: string;
+	readonly name: string;
+	readonly domain: string;
+	readonly shareId: string | null;
+	readonly resetAt: string | null;
+	readonly userId: string;
+	readonly createdAt: string;
+	readonly updatedAt: string;
+	readonly deletedAt: string | null;
 
-	constructor(apiClient: UmamiApiClient, axios: AxiosInstance, data: WebsiteData) {
-		this._apiClient = apiClient;
-		this._axios = axios;
+	constructor(axios: AxiosInstance, data: WebsiteData) {
+		this.#axios = axios;
 		this.id = data.id;
-		this.websiteUuid = data.websiteUuid;
-		this.userId = data.userId;
 		this.name = data.name;
 		this.domain = data.domain;
 		this.shareId = data.shareId;
+		this.userId = data.userId;
+		this.resetAt = data.resetAt;
 		this.createdAt = data.createdAt;
+		this.updatedAt = data.updatedAt;
+		this.deletedAt = data.deletedAt;
 	}
 
 	/**
 	 * Updates the website.
 	 * @param options.domain The domain name of the website (e.g. umami.is)
 	 * @param options.name The name of the website (usually the same as the domain)
-	 * @param options.owner The website's owner's ID (by default, the logged-in's user's)
-	 * @param options.enableShareUrl Whether or not to enable public sharing.
+	 * @param options.shareId A unique string to enable a share url. Set `null` to unshare.
 	 * @returns
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/index.js#L23-L57 Relevant Umami source code}
 	 */
-	public async update(options: {
-		domain: string;
-		name: string;
-		owner?: number;
-		enableShareUrl?: boolean;
-	}) {
-		if (!options.owner) {
-			const currentUser = await this._apiClient.getCurrentUser();
-			options = {
-				...options,
-				owner: currentUser.userId,
-			};
-		}
-
-		const { data } = await this._axios.post<WebsiteData>(`/websites/${this.websiteUuid}`, options);
+	async update(
+		options: RequireAtLeastOne<{
+			domain: string;
+			name: string;
+			shareId: string;
+		}>,
+	) {
+		const { data } = await this.#axios.post<WebsiteData>(
+			`/websites/${this.id}`,
+			options,
+		);
 		Object.assign(this, data);
 		return this;
 	}
@@ -187,8 +172,8 @@ export class Website implements WebsiteData {
 	 * Deletes the website
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/index.js#L59-L67 Relevant Umami source code}
 	 */
-	public async delete() {
-		await this._axios.delete(`/websites/${this.websiteUuid}`);
+	async delete() {
+		await this.#axios.delete(`/websites/${this.id}`);
 	}
 
 	/**
@@ -203,26 +188,39 @@ export class Website implements WebsiteData {
 	 * @returns The website's stats from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/stats.js Relevant Umami source code}
 	 */
-	public async getStats(options?: {
+	async getStats(options?: {
 		period?: TimePeriod;
 		url?: string;
 		referrer?: string;
+		title?: string;
+		query?: string;
+		event?: string;
 		os?: string;
 		browser?: string;
 		device?: string;
 		country?: string;
+		region?: string;
+		city?: string;
 	}) {
-		const { data } = await this._axios.get<Stats>(`/websites/${this.websiteUuid}/stats`, {
-			params: {
-				...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
-				url: options?.url,
-				referrer: options?.referrer,
-				os: options?.os,
-				browser: options?.browser,
-				device: options?.device,
-				country: options?.country,
+		const { data } = await this.#axios.get<Stats>(
+			`/websites/${this.id}/stats`,
+			{
+				params: {
+					...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
+					url: options?.url,
+					referrer: options?.referrer,
+					title: options?.title,
+					query: options?.query,
+					event: options?.event,
+					os: options?.os,
+					browser: options?.browser,
+					device: options?.device,
+					country: options?.country,
+					region: options?.region,
+					city: options?.city,
+				},
 			},
-		});
+		);
 		return data;
 	}
 
@@ -230,8 +228,8 @@ export class Website implements WebsiteData {
 	 * Resets the website's stats
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/reset.js Relevant Umami source code}
 	 */
-	public async resetStats() {
-		await this._axios.post(`/websites/${this.websiteUuid}/reset`);
+	async resetStats() {
+		await this.#axios.post(`/websites/${this.id}/reset`);
 		return this;
 	}
 
@@ -249,30 +247,39 @@ export class Website implements WebsiteData {
 	 * @returns The website's pageviews from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/pageviews.js Relevant Umami source code}
 	 */
-	public async getPageviews(options?: {
+	async getPageviews(options?: {
 		period?: TimePeriod;
 		unit?: TimeUnit;
-		tz?: string;
+		timezone?: string;
 		url?: string;
 		referrer?: string;
+		title?: string;
 		os?: string;
 		browser?: string;
 		device?: string;
 		country?: string;
+		region?: string;
+		city?: string;
 	}) {
-		const { data } = await this._axios.get<PageViews>(`/websites/${this.websiteUuid}/pageviews`, {
-			params: {
-				...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
-				unit: options?.unit ?? DEFAULT_TIME_UNIT,
-				tz: options?.tz ?? DEFAULT_TIMEZONE,
-				url: options?.url,
-				referrer: options?.referrer,
-				os: options?.os,
-				browser: options?.browser,
-				device: options?.device,
-				country: options?.country,
+		const { data } = await this.#axios.get<PageViews>(
+			`/websites/${this.id}/pageviews`,
+			{
+				params: {
+					...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
+					unit: options?.unit ?? DEFAULT_TIME_UNIT,
+					timezone: options?.timezone ?? DEFAULT_TIMEZONE,
+					url: options?.url,
+					referrer: options?.referrer,
+					title: options?.title,
+					os: options?.os,
+					browser: options?.browser,
+					device: options?.device,
+					country: options?.country,
+					region: options?.region,
+					city: options?.city,
+				},
 			},
-		});
+		);
 		return data;
 	}
 
@@ -280,28 +287,31 @@ export class Website implements WebsiteData {
 	 * Gets the events of the website from a specified time period
 	 * @param options.period The time period of events to return
 	 * @param options.unit The interval of time/precision of the returned events
-	 * @param options.tz The timezone you're in (defaults to "America/Toronto")
+	 * @param options.timezone The timezone you're in (defaults to "America/Toronto")
 	 * @param options.url The url where the event happened.
-	 * @param options.event_type The type of event to request.
+	 * @param options.eventName The name of event to request.
 	 * @returns An array of events from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/website/[id]/events.js Relevant Umami source code}
 	 */
-	public async getEvents(options?: {
+	async getEvents(options?: {
 		period?: TimePeriod;
 		unit?: TimeUnit;
-		tz?: string;
+		timezone?: string;
 		url?: string;
-		event_type?: string;
+		eventName?: string;
 	}) {
-		const { data } = await this._axios.get<Event[]>(`/websites/${this.websiteUuid}/events`, {
-			params: {
-				...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
-				unit: options?.unit ?? DEFAULT_TIME_UNIT,
-				tz: options?.tz ?? DEFAULT_TIMEZONE,
-				url: options?.url,
-				event_type: options?.event_type,
+		const { data } = await this.#axios.get<Event[]>(
+			`/websites/${this.id}/events`,
+			{
+				params: {
+					...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
+					unit: options?.unit ?? DEFAULT_TIME_UNIT,
+					timezone: options?.timezone ?? DEFAULT_TIMEZONE,
+					url: options?.url,
+					eventName: options?.eventName,
+				},
 			},
-		});
+		);
 		return data;
 	}
 
@@ -318,28 +328,41 @@ export class Website implements WebsiteData {
 	 * @returns An array of metrics from the specified time period
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/metrics.js Relevant Umami source code}
 	 */
-	public async getMetrics(options?: {
+	async getMetrics(options?: {
 		period?: TimePeriod;
 		type?: MetricType;
 		url?: string;
 		referrer?: string;
+		title?: string;
+		query?: string;
+		event?: string;
 		os?: string;
 		browser?: string;
 		device?: string;
 		country?: string;
+		region?: string;
+		city?: string;
 	}) {
-		const { data } = await this._axios.get<Metric[]>(`/websites/${this.websiteUuid}/metrics`, {
-			params: {
-				...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
-				type: options?.type ?? DEFAULT_METRIC_TYPE,
-				url: options?.url,
-				referrer: options?.referrer,
-				os: options?.os,
-				browser: options?.browser,
-				device: options?.device,
-				country: options?.country,
+		const { data } = await this.#axios.get<Metric[]>(
+			`/websites/${this.id}/metrics`,
+			{
+				params: {
+					...convertPeriodToTime(options?.period ?? DEFAULT_TIME_PERIOD),
+					type: options?.type ?? DEFAULT_METRIC_TYPE,
+					url: options?.url,
+					referrer: options?.referrer,
+					title: options?.title,
+					query: options?.query,
+					event: options?.event,
+					os: options?.os,
+					browser: options?.browser,
+					device: options?.device,
+					country: options?.country,
+					region: options?.region,
+					city: options?.city,
+				},
 			},
-		});
+		);
 		return data;
 	}
 
@@ -348,8 +371,10 @@ export class Website implements WebsiteData {
 	 * @returns
 	 * @see {@link https://github.com/umami-software/umami/blob/master/pages/api/websites/[id]/active.js Relevant Umami source code}
 	 */
-	public async getActiveVisitors() {
-		const { data } = await this._axios.get<ActiveVisitor[]>(`/websites/${this.websiteUuid}/active`);
+	async getActiveVisitors() {
+		const { data } = await this.#axios.get<ActiveVisitor[]>(
+			`/websites/${this.id}/active`,
+		);
 		return data;
 	}
 }
