@@ -5,7 +5,10 @@ import axios, {
 } from "axios";
 import { Website, type WebsiteData } from "./classes/website";
 import { UserAccount, type UserAccountData } from "./classes/user-account";
-import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_USER_AGENT } from "./defaults";
+import {
+	DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+	DEFAULT_USER_AGENT,
+} from "./constants";
 
 interface AuthData {
 	token: string;
