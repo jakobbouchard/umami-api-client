@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 
-import UmamiAPIClient from "../src/index";
+import UmamiAPIClient from "../src/umami-api-client";
 
 const AUTH_RESPONSE = {
 	token: "tokenPlaceHolder",

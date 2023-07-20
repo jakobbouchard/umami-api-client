@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import UmamiAPIClient from "../src/index";
+import UmamiAPIClient from "../src/umami-api-client";
 
 const invalidTarget = "example.com";
 const user = "user";
@@ -10,6 +10,8 @@ describe("negative cases", () => {
 		// flaky with timeout to 1 sec
 
 		const umami = new UmamiAPIClient(invalidTarget, user, password);
-		await expect(umami.getWebsite()).rejects.toThrow("Request failed with status code 404");
+		await expect(umami.getWebsite()).rejects.toThrow(
+			"Request failed with status code 404",
+		);
 	});
 });
