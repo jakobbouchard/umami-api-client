@@ -39,7 +39,7 @@ interface EventPayload {
 
 type CollectPayload = PageViewPayload | EventPayload;
 
-export default class UmamiApiClient {
+export class UmamiAPIClient {
 	readonly #axios: AxiosInstance;
 	readonly #auth: Promise<AxiosResponse<AuthData>>;
 	#lastAuthCheck: number = Date.now();
