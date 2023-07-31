@@ -28,7 +28,7 @@
 		"client"
 	],
 	"type": "module",
-	"packageManager": "pnpm@8.6.10",
+	"packageManager": "pnpm@8.6.11",
 	"engines": {
 		"node": ">=16.0.0"
 	},
@@ -62,13 +62,13 @@
 	"devDependencies": {
 		"@changesets/changelog-github": "0.4.8",
 		"@changesets/cli": "2.26.2",
-		"@types/node": "18.17.0",
-		"@typescript-eslint/eslint-plugin": "6.2.0",
-		"@typescript-eslint/parser": "6.2.0",
+		"@types/node": "18.17.1",
+		"@typescript-eslint/eslint-plugin": "6.2.1",
+		"@typescript-eslint/parser": "6.2.1",
 		"@vitest/coverage-c8": "0.33.0",
 		"axios-mock-adapter": "1.21.5",
-		"eslint": "8.45.0",
-		"eslint-config-prettier": "8.8.0",
+		"eslint": "8.46.0",
+		"eslint-config-prettier": "8.9.0",
 		"husky": "8.0.3",
 		"lint-staged": "13.2.3",
 		"prettier": "3.0.0",
