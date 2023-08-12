@@ -1,6 +1,6 @@
 {
 	"name": "umami-api",
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"publishConfig": {
 		"access": "public"
 	},
@@ -10,8 +10,7 @@
 		"Brice Vandeputte <boly38@gmail.com>"
 	],
 	"funding": [
-		"https://github.com/sponsors/jakobbouchard",
-		"https://ko-fi.com/jakobbouchard"
+		"https://github.com/sponsors/jakobbouchard"
 	],
 	"license": "MIT",
 	"repository": "github:jakobbouchard/umami-api-client",

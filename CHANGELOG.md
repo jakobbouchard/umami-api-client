@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.3
+
+### Patch Changes
+
+- Remove ko-fi from funding
+
 ## 0.7.2
 
 ### Patch Changes
