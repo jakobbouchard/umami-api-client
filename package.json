@@ -27,7 +27,7 @@
 		"client"
 	],
 	"type": "module",
-	"packageManager": "pnpm@8.9.0",
+	"packageManager": "pnpm@8.9.2",
 	"engines": {
 		"node": ">=16.0.0"
 	},
@@ -61,7 +61,7 @@
 	"devDependencies": {
 		"@changesets/changelog-github": "0.4.8",
 		"@changesets/cli": "2.26.2",
-		"@types/node": "18.18.4",
+		"@types/node": "18.18.5",
 		"@typescript-eslint/eslint-plugin": "6.7.5",
 		"@typescript-eslint/parser": "6.7.5",
 		"@vitest/coverage-c8": "0.33.0",
