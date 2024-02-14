@@ -45,7 +45,7 @@
 		"dist"
 	],
 	"scripts": {
-		"prepare": "husky install",
+		"prepare": "husky",
 		"prepublish": "pnpm build",
 		"build": "tsup",
 		"dev": "tsup --watch",
