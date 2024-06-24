@@ -1,3 +1,6 @@
+> [!WARNING]
+> I am no longer working in web development and don't really have time or interest in maintaining this repository. It has been incompatible with umami for a while and it would take me too much time to update it. However, if anybody is interested in maintaining it, I would gladly transfer the repository and NPM package (if that's possible?)
+
 # Umami API Client
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/jakobbouchard/umami-api-client/test.yml?branch=main&label=tests&style=flat-square)
