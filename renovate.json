@@ -1,5 +1,6 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"enabled": false,
 	"extends": ["config:js-lib", "group:allNonMajor", "schedule:earlyMondays"],
 	"timezone": "America/Montreal"
 }
